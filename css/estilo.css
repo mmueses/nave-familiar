@@ -404,3 +404,47 @@ input:focus { border-color: #ffe66b; outline: none; box-shadow: 0 0 0 4px rgba(2
 .tv .lobby { padding: 2vw; gap: 2vw; }
 .tv .lobby .left, .tv .lobby .right { padding: 1.4vw 1.8vw; gap: 0.9vw; min-height: 0; overflow: auto; }
 .tv .plist { min-height: 10vw; }
+
+/* Jugador que se ha caído en la sala de espera (se le guarda el sitio 20 s) */
+#lobbyList .off { opacity: 0.4; filter: grayscale(0.7); }
+
+/* Papel secreto: se ve solo manteniendo pulsado */
+.ph .holdBtn { display: flex; align-items: center; gap: 10px; padding: 18px 26px; border-radius: 18px; border: 3px solid #9aa3c7; background: linear-gradient(#3a4166, #262b47); color: #fff; font-size: 1.15em; font-weight: 800; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.ph .holdBtn:active { transform: scale(0.97); }
+.ph .holdIcon { font-size: 1.6em; }
+.ph .secretBox { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.ph .rolebadge { background: rgba(60,64,80,0.85); border: 3px solid #9aa3c7; color: #fff; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.ph .rolePeek { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; background: rgba(10,12,24,0.96); border: 3px solid #9aa3c7; border-radius: 18px; padding: 18px 22px; text-align: center; white-space: pre-line; max-width: 86vw; pointer-events: none; }
+.ph .rolePeek .role { font-size: 2em; font-weight: 900; margin-bottom: 6px; }
+.ph .act.frz { background: #4a5b8c; }
+.ph .sabRow { display: flex; gap: 14px; justify-content: center; margin-top: 10px; }
+/* Usar y Avisar siempre abajo en el mismo sitio; Congelar/Rejilla aparecen encima solo cuando se pueden usar */
+.ph .controls, .ph .controls.imp { grid-template-columns: repeat(2, auto); }
+.ph #bRep { grid-row: 2; grid-column: 1; }
+.ph #bUse { grid-row: 2; grid-column: 2; }
+.ph #bVent { grid-row: 1; grid-column: 1; }
+.ph #bFrz, .ph #bNext { grid-row: 1; grid-column: 2; }
+.ph .secretBox { position: absolute; left: 50%; top: 14%; transform: translateX(-50%); z-index: 5; width: min(88vw, 420px); background: rgba(10,12,24,0.96); border: 3px solid #9aa3c7; border-radius: 18px; padding: 16px; pointer-events: none; }
+.ph #mapModal .sabRow { position: absolute; left: 10px; top: calc(10px + env(safe-area-inset-top)); margin: 0; z-index: 2; background: rgba(10,12,24,0.85); border: 2px solid #8e4ec6; border-radius: 16px; padding: 8px 10px; gap: 10px; }
+.ph #mapModal .sabRow .act { width: 68px; height: 68px; font-size: 0.72em; }
+
+/* Frases de los bots en las reuniones */
+.talkBox { display: flex; flex-direction: column; gap: 6px; width: min(94vw, 560px); max-height: 34vh; overflow-y: auto; background: rgba(10,12,28,0.7); border: 2px solid #5a6488; border-radius: 14px; padding: 8px 10px; }
+.talkBox.hidden { display: none; }
+.talkTitle { font-weight: 900; font-size: 0.85em; color: #c9cde0; letter-spacing: 0.03em; }
+.talkRow { display: flex; align-items: center; gap: 8px; }
+.talkRow canvas { flex: none; }
+.talkRow .bubble { background: #f2f4fb; color: #1a1d2e; border-radius: 12px 12px 12px 3px; padding: 6px 10px; font-size: 0.95em; line-height: 1.25; text-align: left; }
+.talkRow .bubble b { color: #3b3f9e; }
+.talkRow.pop { animation: pop 0.35s ease-out; }
+.talkBox.tv { width: min(80vw, 1100px); max-height: 30vh; font-size: 1.5vw; border-width: 3px; padding: 1vw 1.4vw; gap: 0.8vw; }
+.talkBox.tv .talkTitle { font-size: 1.2vw; }
+@media (prefers-reduced-motion: reduce) { .talkRow.pop { animation: none; } }
+/* Tele: mientras hablan los bots, tarjetas en una fila y frases en dos columnas */
+.tv #sMeeting.withTalk .mgrid { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8vw; margin-top: 1vw; }
+.tv #sMeeting.withTalk .mcard { width: 8.6vw; padding: 0.6vw; font-size: 1.15vw; }
+.tv #sMeeting.withTalk .mcard canvas { width: 3.8vw !important; height: auto !important; }
+.talkBox.tv { display: grid; grid-template-columns: 1fr 1fr; align-content: start; max-height: none; margin-top: 1vw; font-size: 1.35vw; }
+.talkBox.tv.hidden { display: none; }
+.talkBox.tv .talkTitle { grid-column: 1 / -1; }
+.ph .talkBox { max-height: 46vh; }

@@ -21,6 +21,12 @@
   if (isNaN(myColor)) myColor = Math.floor(Math.random() * COLORS.length);
 
   var SOLO = /[?&](solo|crear)=1/.test(location.search);   // este móvil crea la partida (y puede invitar a otros)
+  var rejoining = false, lastAtSaved = 0;
+  // Cuándo recibimos datos de una partida por última vez (con &tab=1, por pestaña, para las pruebas)
+  var lastAt = {
+    get: function () { try { return perTab ? sessionStorage.getItem('nave.lastAt') : store.get('nave.lastAt'); } catch (e) { return null; } },
+    set: function (v) { try { if (perTab) sessionStorage.setItem('nave.lastAt', v); else store.set('nave.lastAt', v); } catch (e) {} }
+  };
   var conn = null, code = null, lastData = 0, retryTimer = null, joinedOnce = false, stopRetry = false, connecting = false;
   var s = null;           // última foto recibida
   var screen = null;
@@ -75,6 +81,7 @@
     var c = NET.cleanCode($('code').value);
     if (c.length !== 4) { $('joinErr').textContent = t('ph.notFound'); return; }
     if (conn || connecting) return;   // ya conectando (doble toque)
+    rejoining = false;
     store.set('nave.code', c);
     code = c; stopRetry = false; joinedOnce = false;
     $('joinErr').textContent = '';
@@ -110,6 +117,9 @@
       },
       onError: function (e) {
         connecting = false;
+        if (rejoining && !joinedOnce) {   // la partida de antes ya no existe: pantalla de entrar normal, sin error
+          rejoining = false; code = null; lastAt.set('0'); show('sJoin'); return;
+        }
         if (first && !joinedOnce) {
           show('sJoin');
           $('joinErr').textContent = e === 'notfound' ? t('ph.notFound') : e === 'blocked' ? t('ph.errBlocked') : t('ph.errServer');
@@ -133,13 +143,17 @@
     if (!m) return;
     if (m.t === 'err') {
       stopRetry = true;
+      if (rejoining && !joinedOnce) { rejoining = false; var c0 = conn; conn = null; if (c0) c0.close(); lastAt.set('0'); show('sJoin'); return; }
       var c = conn; conn = null; if (c) c.close();
       show('sJoin');
       $('joinErr').textContent = m.e === 'full' ? t('ph.full') : t('ph.inGame');
       return;
     }
-    if (m.t === 'hi') { joinedOnce = true; return; }
-    if (m.t === 's') onSnap(m);
+    if (m.t === 'hi') { joinedOnce = true; rejoining = false; return; }
+    if (m.t === 's') {
+      if (!SOLO && Date.now() - lastAtSaved > 5000) { lastAtSaved = Date.now(); lastAt.set(String(lastAtSaved)); }
+      onSnap(m);
+    }
   }
 
   // ---------- Crear partida en este móvil: lleva el juego y abre una sala para invitar a otros ----------
@@ -210,6 +224,7 @@
       s.players.forEach(function (p) {
         var d = document.createElement('div');
         if (seenIds && !seenIds[p.id]) d.className = 'jump';
+        if (p.on === false) d.classList.add('off');
         seenIds = seenIds || {}; seenIds[p.id] = 1;
         d.appendChild(DRAW.avatarCanvas(hexOf(p.c), 52, { look: p.k }));
         var nm = document.createElement('span'); nm.textContent = p.n; d.appendChild(nm);
@@ -278,21 +293,30 @@
     show('sIntro');
     if (!changed('intro', s.me.role + s.me.c + I18N.lang + JSON.stringify(s.lineup))) return;
     var imp = s.me.role === 'imp';
+    // El papel solo se ve mientras se mantiene pulsado; el resto de la pantalla es igual para todos
     $('introRole').textContent = imp ? t('ph.imp') : t('ph.crew');
     $('introRole').style.color = imp ? '#ff4d4d' : '#6fd0ff';
     $('introSub').textContent = s.nImp === 1 ? t('tv.thereAre1') : t('tv.thereAreN', { n: s.nImp });
     $('introHint').textContent = imp ? t('ph.impHint') : t('ph.crewHint');
     if (imp && s.me.partners && s.me.partners.length) $('introHint').textContent += ' ' + t('ph.partner', { name: s.me.partners.join(', ') });
-    $('cover').classList.add('hidden');
+    $('introSecret').classList.add('hidden');
     drawLineup(imp);
-    vib(imp ? [100, 60, 100] : 120);
+    vib(120);   // igual para todos
   }
+  // Mantener pulsado para ver algo secreto; al soltar se oculta
+  function holdToShow(btn, onShow, onHide) {
+    function on(e) { e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch (x) {} onShow(); }
+    function off() { onHide(); }
+    btn.addEventListener('pointerdown', on);
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { btn.addEventListener(ev, off); });
+    btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
+  holdToShow($('introHold'), function () { $('introSecret').classList.remove('hidden'); }, function () { $('introSecret').classList.add('hidden'); });
   function drawLineup(imp) {
     var cv = $('lineupCv'), dpr = window.devicePixelRatio || 1;
     var W = Math.min(window.innerWidth * 0.92, 640), H = Math.min(window.innerHeight * 0.4, 220);
     cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
     var ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
-    $('sIntro').style.background = imp ? 'radial-gradient(ellipse at 50% 70%, #5a1218, #05070f 70%)' : 'radial-gradient(ellipse at 50% 70%, #123a5a, #05070f 70%)';
     var list = s.lineup.slice();
     var meIdx = list.findIndex(function (x) { return x[2]; });
     var me = list.splice(meIdx, 1)[0];
@@ -307,7 +331,6 @@
     });
     DRAW.character(ctx, W / 2, H - 17 * sc, hexOf(me[0]), { scale: sc, name: me[1], nameColor: '#ffe66b', look: me[3] });
   }
-  $('sIntro').onclick = function () { $('cover').classList.toggle('hidden'); };
 
   // ---------- Partida ----------
   function stationName(sid) {
@@ -324,7 +347,7 @@
       var bar = document.createElement('div'); bar.className = 'bar';
       var fill = document.createElement('div'); fill.style.width = Math.round((s.prog || 0) * 100) + '%'; bar.appendChild(fill);
       if (s.prog !== null && s.prog !== undefined) box.appendChild(bar);
-      var b = document.createElement('b'); b.textContent = imp ? t('ph.fakeTasks') : t('ph.myTasks'); box.appendChild(b);
+      var b = document.createElement('b'); b.textContent = t('ph.myTasks'); box.appendChild(b);
       me.tasks.forEach(function (x) {
         var d = document.createElement('div');
         if (x.length > 2) {   // tarea en varios pasos: «Sala A → Sala B: Nombre (1/2)»
@@ -335,29 +358,29 @@
         box.appendChild(d);
       });
     }
-    if (changed('badge', me.role + me.ghost + I18N.lang)) {
-      $('badge').className = 'rolebadge ' + me.role;
-      $('badge').textContent = (me.ghost ? '👻 ' : '') + (imp ? t('ph.imp') : t('ph.crew'));
+    if (changed('badge', me.ghost + I18N.lang)) {
+      $('badge').className = 'rolebadge';
+      $('badge').textContent = (me.ghost ? '👻 ' : '🤫 ') + t('ph.myRole');
     }
-    $('phLights').classList.toggle('hidden', !(s.dark && !imp && !me.ghost));
+    if (!$('rolePeek').classList.contains('hidden')) fillPeek();
+    $('phLights').classList.toggle('hidden', !(s.dark && !me.ghost));   // lo ven todos, también el impostor
     $('phReactor').classList.toggle('hidden', !s.reactor);
     if (s.reactor) $('phReactor').textContent = t('ph.reactor', { n: s.reactor });
     $('ghostMsg').classList.toggle('hidden', !me.ghost || !!panel);
     $('ventMsg').classList.toggle('hidden', !me.vent);
-    // botones
+    // botones: todos ven USAR y AVISAR. Los del impostor solo aparecen cuando se pueden usar
+    // (congelar con alguien cerca, rejilla encima de una) y los sabotajes están dentro del mapa.
     var bt = s.b || {}, inVent = !!me.vent, showImp = imp && !me.ghost;
-    $('controls').className = 'controls' + (showImp ? ' imp' : '');
     vis('bUse', !inVent); vis('bRep', !me.ghost && !inVent);
     $('bUse').disabled = !bt.use;
     $('bUse').textContent = bt.use === 'em' ? t('ph.meetingBtn') : t('ph.use');
     $('bRep').disabled = !bt.rep;
-    vis('bFrz', showImp && !inVent); vis('bLights', showImp && !inVent); vis('bReactor', showImp && !inVent);
-    vis('bVent', showImp); vis('bNext', showImp && inVent);
+    vis('bFrz', showImp && !inVent && !!bt.frz);
+    vis('bVent', showImp && !!bt.vent); vis('bNext', showImp && inVent);
+    $('sabRow').classList.toggle('hidden', !showImp);
     if (showImp) {
-      $('bFrz').disabled = !bt.frz; cd($('bFrz'), bt.fcd);
       $('bLights').disabled = !bt.sabL; cd($('bLights'), bt.scd);
       $('bReactor').disabled = !bt.sabR; cd($('bReactor'), bt.scd);
-      $('bVent').disabled = !bt.vent;
       $('bVent').textContent = inVent ? t('ph.ventExit') : t('ph.vent');
     }
     // minijuego, cámaras o mapa
@@ -372,8 +395,20 @@
   $('bUse').onclick = function () { act('use'); };
   $('bRep').onclick = function () { act('report'); };
   $('bFrz').onclick = function () { act('freeze'); };
-  $('bLights').onclick = function () { act('lights'); };
-  $('bReactor').onclick = function () { act('reactor'); };
+  $('bLights').onclick = function () { act('lights'); $('mapModal').classList.add('hidden'); };
+  $('bReactor').onclick = function () { act('reactor'); $('mapModal').classList.add('hidden'); };
+  // «Mi papel»: mantener pulsado para verlo (y, si eres impostor, cuánto falta para poder congelar)
+  function fillPeek() {
+    var me = s && s.me; if (!me) return;
+    var imp = me.role === 'imp', bt = s.b || {};
+    $('peekRole').textContent = (me.ghost ? '👻 ' : '') + (imp ? t('ph.imp') : t('ph.crew'));
+    $('peekRole').style.color = imp ? '#ff4d4d' : '#6fd0ff';
+    var h = imp ? t('ph.impHint') : t('ph.crewHint');
+    if (imp && me.partners && me.partners.length) h += ' ' + t('ph.partner', { name: me.partners.join(', ') });
+    if (imp && !me.ghost) h += '\n' + (bt.fcd ? t('ph.peekFrz', { n: bt.fcd }) : t('ph.peekFrzOk')) + '\n' + t('ph.peekSab');
+    $('peekHint').textContent = h;
+  }
+  holdToShow($('badge'), function () { fillPeek(); $('rolePeek').classList.remove('hidden'); }, function () { $('rolePeek').classList.add('hidden'); });
   $('bVent').onclick = function () { act('vent'); };
   $('bNext').onclick = function () { act('ventNext'); };
 
@@ -509,7 +544,7 @@
         DRAW.character(ctx, me.x, me.y, hexOf(s.me.c), { name: s.me.n, ghost: s.me.ghost, walk: me.walk, dir: me.dir, nameColor: '#ffe66b', look: s.me.k, t: time });
       } else {
         var p = o.p;
-        DRAW.character(ctx, o.d.x, o.d.y, hexOf(p[2]), { name: p[3], ghost: !!p[4], walk: o.d.walk, dir: o.d.dir, nameColor: p[5] ? '#ff6b6b' : '#fff', look: p[6], t: time });
+        DRAW.character(ctx, o.d.x, o.d.y, hexOf(p[2]), { name: p[3], ghost: !!p[4], walk: o.d.walk, dir: o.d.dir, nameColor: '#fff', look: p[6], t: time });
       }
     });
     // Sombra: lo que no ves queda oscuro; las paredes tapan la vista
@@ -670,6 +705,28 @@
   function rname(id) { return s.roster && s.roster[id] ? s.roster[id].n : '?'; }
   function rlook(id) { return s.roster && s.roster[id] ? s.roster[id].k : null; }
   function rcol(id) { return s.roster && s.roster[id] ? hexOf(s.roster[id].c) : '#999'; }
+  // Frases de los bots en la reunión (bocadillos con su personaje)
+  var talkKey = '';
+  function renderTalk(box, talk, nameOf, lookOf, size) {
+    talk = talk || [];
+    var k = JSON.stringify(talk) + I18N.lang;
+    if (k === talkKey) return;
+    var isNew = talk.length > (box.childElementCount - 1);
+    talkKey = k;
+    box.classList.toggle('hidden', !talk.length);
+    box.innerHTML = '';
+    var h = document.createElement('div'); h.className = 'talkTitle'; h.textContent = t('talk.title'); box.appendChild(h);
+    talk.forEach(function (e, i) {
+      var row = document.createElement('div'); row.className = 'talkRow' + (isNew && i === talk.length - 1 ? ' pop' : '');
+      var lk = lookOf(e[0]);
+      row.appendChild(DRAW.avatarCanvas(lk[0], size, { look: lk[1] }));
+      var b = document.createElement('div'); b.className = 'bubble';
+      var n = document.createElement('b'); n.textContent = nameOf(e[0]) + ': '; b.appendChild(n);
+      b.appendChild(document.createTextNode(NAVE_TALK(e, nameOf)));
+      row.appendChild(b); box.appendChild(row);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
   function renderMeeting() {
     show('sMeeting');
     // aviso grande al empezar
@@ -687,6 +744,7 @@
     $('mReason').textContent = s.reason === 'report'
       ? t('tv.reportBy', { name: rname(s.caller), victim: rname(s.victim) })
       : t('tv.buttonBy', { name: rname(s.caller) });
+    renderTalk($('phTalk'), s.talk, rname, function (id) { return [rcol(id), rlook(id)]; }, 34);
     var meAlive = !s.me.ghost;
     var discuss = s.sub === 'discuss';
     $('mDiscuss').classList.toggle('hidden', !discuss);
@@ -788,13 +846,28 @@
   var wl = null;
   function keepAwake() { try { if (navigator.wakeLock && !wl) navigator.wakeLock.request('screen').then(function (l) { wl = l; l.addEventListener('release', function () { wl = null; }); }).catch(function () {}); } catch (e) {} }
   document.addEventListener('click', keepAwake);
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { keepAwake(); if (!conn && code && !stopRetry) scheduleRetry(); } });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible') return;
+    keepAwake();
+    if (SOLO) return;
+    // Al volver de otra app o de la pantalla apagada: si la conexión se quedó muda, reconectamos ya (sin esperar 10 s)
+    if (conn && Date.now() - lastData > 3000) conn.close();
+    else if (!conn && code && !stopRetry) { clearTimeout(retryTimer); retryTimer = null; connect(false); }
+  });
+  // El móvil que crea la partida la lleva dentro: avisamos antes de cerrarla o recargarla sin querer
+  window.addEventListener('beforeunload', function (e) {
+    if (SOLO && server && s && s.ph && s.ph !== 'lobby' && s.ph !== 'end' && server.humansCount() > 1) { e.preventDefault(); e.returnValue = ''; return ''; }
+  });
 
   // ---------- Arranque ----------
   I18N.apply();
   show('sJoin');
-  if (!SOLO && q && store.get('nave.name') && store.get('nave.code') === q[1].toUpperCase() && sessionStorage.getItem('nave.joined') === q[1].toUpperCase()) {
-    code = q[1].toUpperCase(); connect(false);
+  var recent = Date.now() - (parseInt(lastAt.get(), 10) || 0) < 10 * 60 * 1000;
+  var lastCode = store.get('nave.code');
+  if (!SOLO && store.get('nave.name') && lastCode && (q ? lastCode === q[1].toUpperCase() : true) &&
+      ((q && sessionStorage.getItem('nave.joined') === lastCode) || recent)) {
+    // Estaba en una partida hace menos de 10 minutos: volvemos solos a ella con el mismo jugador
+    code = lastCode; rejoining = true; connect(true);
   }
   window.addEventListener('beforeunload', function () { if (joinedOnce && code) try { sessionStorage.setItem('nave.joined', code); } catch (e) {} });
 

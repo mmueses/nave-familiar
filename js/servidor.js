@@ -15,11 +15,16 @@
     var self = this, last = performance.now(), lastSend = 0;
     setInterval(function () {
       var now = performance.now();
-      var dt = Math.min(0.25, (now - last) / 1000); last = now;
+      var gap = now - last;
+      var dt = Math.min(0.25, gap / 1000); last = now;
+      var ms = Date.now();
+      // Si este aparato estuvo en pausa (pantalla apagada, llamada, otra app), no echamos a nadie:
+      // les damos de nuevo margen para que sus móviles vuelvan a hablar.
+      if (gap > 3000) self.conns.forEach(function (c) { if (!c.local) c.last = ms; });
       if (game.phase !== 'lobby') game.tick(dt);
       if (now - lastSend >= 90) { lastSend = now; self.sendAll(); }
-      var ms = Date.now();
       self.conns.slice().forEach(function (c) { if (!c.local && ms - c.last > 15000) { c.w.close(); self.drop(c); } });
+      if (game.purgeLobby(20000)) self.onChange();
     }, 40);
   }
   var P = NaveServer.prototype;

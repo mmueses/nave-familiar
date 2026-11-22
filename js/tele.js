@@ -208,6 +208,31 @@
     if (extra) extra(c);
     return c;
   }
+  // Frases de los bots en la reunión
+  var talkKey = '';
+  function renderTalk() {
+    var talk = game.talkNow(), box = $('tvTalk');
+    var k = JSON.stringify(talk) + I18N.lang;
+    if (k === talkKey) return;
+    var isNew = talk.length > Math.max(0, box.childElementCount - 1);
+    talkKey = k;
+    box.classList.toggle('hidden', !talk.length);
+    $('sMeeting').classList.toggle('withTalk', !!talk.length);
+    box.innerHTML = '';
+    var h = document.createElement('div'); h.className = 'talkTitle'; h.textContent = t('talk.title'); box.appendChild(h);
+    var size = Math.max(36, Math.round(window.innerWidth * 0.032));
+    talk.forEach(function (e, i) {
+      var p = game.players[e[0]]; if (!p) return;
+      var row = document.createElement('div'); row.className = 'talkRow' + (isNew && i === talk.length - 1 ? ' pop' : '');
+      row.appendChild(DRAW.avatarCanvas(COLORS[p.color].hex, size, { look: p.look }));
+      var b = document.createElement('div'); b.className = 'bubble';
+      var n = document.createElement('b'); n.textContent = p.name + ': '; b.appendChild(n);
+      b.appendChild(document.createTextNode(NAVE_TALK(e, name)));
+      row.appendChild(b); box.appendChild(row);
+    });
+    box.scrollTop = box.scrollHeight;
+    if (isNew) beep([520], 0.06);
+  }
   var meetingKey = '';
   function renderMeeting() {
     var m = game.meeting;
@@ -223,6 +248,7 @@
       : t('tv.buttonBy', { name: name(m.caller) });
     $('mPhase').textContent = m.sub === 'discuss' ? t('tv.discuss') : t('tv.vote');
     $('mTimer').textContent = t('tv.secondsLeft', { n: Math.max(0, Math.ceil(m.end - game.now)) });
+    renderTalk();
     var key = m.sub + '|' + game.list().map(function (p) { return p.id + (p.vote !== undefined ? 'v' : '') + (p.ready ? 'r' : ''); }).join(',');
     if (key === meetingKey) return;
     meetingKey = key;

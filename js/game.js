@@ -20,6 +20,8 @@
     reactorTime: 45,
     splashTime: 2.5, discussTime: 30, voteTime: 35, ejectTime: 8, introTime: 6,
     tasksPerPlayer: 5, maxHumans: 12, maxTotal: 12, minTotal: 5,
+    impStagger: 0.5,      // con 2 o más impostores, el segundo empieza con media espera de retraso
+    afterMeetingCd: 0.6,  // tras una reunión, la espera para congelar empieza en este % (con 2 o más impostores, completa)
     botTakeover: 30 // segundos desconectado antes de que un bot mueva a ese jugador
   };
 
@@ -51,7 +53,7 @@
     { k: 'speed',        vals: [0.75, 1, 1.25, 1.5],        def: 1,        fmt: 'x' },
     { k: 'crewVision',   vals: [0.5, 0.75, 1, 1.25, 1.5],   def: 1,        fmt: 'x' },
     { k: 'impVision',    vals: [0.75, 1, 1.25, 1.5, 1.75],  def: 1.25,     fmt: 'x' },
-    { k: 'freezeCd',     vals: [10, 15, 20, 25, 30, 45, 60], def: 25,      fmt: 's' },
+    { k: 'freezeCd',     vals: [10, 15, 20, 25, 30, 45, 60], def: 15,      fmt: 's' },
     { k: 'freezeRange',  vals: ['short', 'normal', 'long'], def: 'normal', fmt: 'opt' },
     { k: 'tasks',        vals: [3, 4, 5, 6, 7, 8],          def: 5,        fmt: 'n' },
     { k: 'meetings',     vals: [0, 1, 2, 3],                def: 1,        fmt: 'n' },
@@ -62,17 +64,19 @@
     { k: 'anonVotes',    vals: [false, true],               def: false,    fmt: 'yn' }
   ];
   Game.defaultSettings = function () {
-    var s = { total: 8, impostors: 1, botLevel: 'easy', map: 'nave' };
+    var s = { total: 8, impostors: 1, botLevel: 'easy', map: 'nave', bal: 2 };
     Game.SETTINGS.forEach(function (d) { s[d.k] = d.def; });
     return s;
   };
+  // Espera para congelar recomendada según los impostores (probado con partidas simuladas: ~50 % cada bando)
+  Game.REC_FREEZE = { 1: 15, 2: 45, 3: 45 };
   // Dificultad de los bots
   Game.BOT = {
-    easy:   { speed: 0.7,  task: [9, 14], idle: [4, 9], huntDelay: [8, 18], wander: 0.3,  notice: 0.45, witness: 0.6,  ventSee: 0.3, lightsDelay: 6, reactorDelay: 4,   reactorFixers: 2,
+    easy:   { speed: 0.7,  task: [12, 18], idle: [4, 9], huntDelay: [8, 18], wander: 0.3,  notice: 0.45, witness: 0.6,  ventSee: 0.3, lightsDelay: 6, reactorDelay: 4,   reactorFixers: 2,
               follow: 0.65, suspect: 0,    freeze: 0.8, sab: 0.025, reactorShare: 0.3,  ventEscape: 0.5,  selfReport: 0,    impFollow: 0.3,  memory: 0 },
-    normal: { speed: 0.8,  task: [6, 10], idle: [2, 5], huntDelay: [2, 7], wander: 0.15, notice: 0.75, witness: 0.85, ventSee: 0.7, lightsDelay: 4, reactorDelay: 2.5, reactorFixers: 2,
+    normal: { speed: 0.8,  task: [11, 18], idle: [2, 5], huntDelay: [2, 7], wander: 0.15, notice: 0.75, witness: 0.85, ventSee: 0.7, lightsDelay: 4, reactorDelay: 2.5, reactorFixers: 2,
               follow: 0.5,  suspect: 0.2,  freeze: 4,   sab: 0.04,  reactorShare: 0.4,  ventEscape: 0.75, selfReport: 0.1,  impFollow: 0.6,  memory: 20 },
-    hard:   { speed: 0.92, task: [5, 8],  idle: [1, 2], huntDelay: [0, 0.5], wander: 0.05, notice: 0.95, witness: 1,    ventSee: 1,   lightsDelay: 2, reactorDelay: 1.5, reactorFixers: 3,
+    hard:   { speed: 0.92, task: [9, 14],  idle: [1, 2], huntDelay: [0, 0.5], wander: 0.05, notice: 0.95, witness: 1,    ventSee: 1,   lightsDelay: 2, reactorDelay: 1.5, reactorFixers: 3,
               follow: 0.35, suspect: 0.35, freeze: 10,  sab: 0.06,  reactorShare: 0.3,  ventEscape: 0.95, selfReport: 0.2,  impFollow: 0.85, memory: 30 }
   };
   // Máximo de impostores según jugadores: 5-6 → 1, 7-9 → 2, 10-12 → 3
@@ -109,6 +113,7 @@
     if (p) {
       p.connected = true;
       p.discAt = 0;
+      p.lobbyGone = 0;
       p.level = level;
       if (this.phase === 'lobby') {
         p.name = name;
@@ -128,8 +133,9 @@
     var p = this.players[pid];
     if (!p) return;
     if (this.phase === 'lobby') {
-      delete this.players[pid];
-      this.order = this.order.filter(function (id) { return id !== pid; });
+      // En la sala de espera le guardamos el sitio 20 s por si su móvil solo ha parpadeado
+      p.connected = false;
+      p.lobbyGone = Date.now();
     } else {
       p.connected = false;
       p.discAt = this.now;
@@ -137,8 +143,23 @@
     }
   };
 
+  // Quita de la sala de espera a quien lleva más de 'ms' desconectado (o a todos los desconectados si ms = 0)
+  G.purgeLobby = function (ms) {
+    if (this.phase !== 'lobby') return false;
+    var self = this, now = Date.now(), gone = false;
+    this.order = this.order.filter(function (id) {
+      var p = self.players[id];
+      if (p && !p.bot && !p.connected && now - (p.lobbyGone || 0) >= ms) { delete self.players[id]; gone = true; return false; }
+      return true;
+    });
+    return gone;
+  };
+
   G.setSettings = function (s) {
     if (!s || this.phase !== 'lobby') return;
+    var prevImps = this.settings.impostors;
+    // Ajustes guardados de versiones anteriores: su «espera para congelar» era de antes del reequilibrio
+    var old = s.hasOwnProperty('total') && s.bal !== 2;
     var n = parseInt(s.total, 10);
     if (n >= CFG.minTotal && n <= CFG.maxTotal) this.settings.total = n;
     var k = parseInt(s.impostors, 10);
@@ -148,11 +169,15 @@
     var self = this;
     Game.SETTINGS.forEach(function (d) { if (s.hasOwnProperty(d.k) && d.vals.indexOf(s[d.k]) >= 0) self.settings[d.k] = s[d.k]; });
     this.settings.impostors = Math.min(this.settings.impostors, Game.maxImps(Math.max(this.settings.total, this.humans().length)));
+    // Al cambiar el número de impostores, la espera para congelar pasa a la recomendada (se puede retocar después)
+    if (old || (this.settings.impostors !== prevImps && !s.hasOwnProperty('freezeCd'))) this.settings.freezeCd = Game.REC_FREEZE[this.settings.impostors] || 15;
+    this.settings.bal = 2;
   };
 
   // ---------- Empezar ----------
   G.start = function () {
     if (this.phase !== 'lobby') return false;
+    this.purgeLobby(0);
     var humans = this.humans();
     if (!humans.length) return false;
     var self = this;
@@ -252,10 +277,14 @@
     });
   };
   G.resetCooldowns = function (fz, sab) {
-    var self = this;
-    this.list().forEach(function (p) {
-      if (p.role === 'imp') { p.freezeAt = self.now + fz; p.sabAt = self.now + sab; }
+    var self = this, k = 0;
+    // Con varios impostores se turnan: cada uno espera media «espera para congelar» más que el anterior,
+    // para que no congelen a la vez y la tripulación tenga ocasión de avisar entre medias.
+    var stagger = (CFG.impStagger || 0) * this.settings.freezeCd;
+    shuffle(this.list().filter(function (p) { return p.role === 'imp' && !self.isGhost(p); })).forEach(function (p) {
+      p.freezeAt = self.now + fz + stagger * (k++); p.sabAt = self.now + sab;
     });
+    this.list().forEach(function (p) { if (p.role === 'imp' && self.isGhost(p)) { p.freezeAt = self.now + fz; p.sabAt = self.now + sab; } });
     this.meetingAllowedAt = this.now + CFG.meetingCdStart;
   };
 
@@ -334,7 +363,7 @@
         if (!this.checkWin()) {
           this.bodies = [];
           this.placeAtSpawn();
-          this.resetCooldowns(this.settings.freezeCd * 0.6, CFG.sabCdStart);
+          this.resetCooldowns(this.settings.freezeCd * (this.aliveImps().length > 1 ? 1 : CFG.afterMeetingCd), CFG.sabCdStart);
           this.phase = 'play';
           this.onEvent('play');
         }
@@ -457,14 +486,16 @@
     v.busy = null;
     v.input = { x: 0, y: 0 };
     v.ai = null;
-    this.bodies.push({ id: v.id, x: v.x, y: v.y, t: this.now });
+    var where = {};
+    this.list().forEach(function (o) { if (o.alive && !o.ejected) where[o.id] = MAP.roomAt(o.x, o.y); });
+    this.bodies.push({ id: v.id, x: v.x, y: v.y, t: this.now, room: MAP.roomAt(v.x, v.y), where: where });
     p.freezeAt = this.now + this.settings.freezeCd;
     p.stats.freezes++;
     var self = this;
     this.list().forEach(function (o) {
       if (o === p || o === v || self.isGhost(o)) return;
       if (self.sees(o, v) && self.sees(o, p) && (!self.isBotNow(o) || Math.random() < self.bp().witness)) {
-        o.witness[p.id] = true;
+        o.witness[p.id] = { t: 'frz', v: v.id };
         // los bots difíciles avisan enseguida si lo han visto
         if (self.isBotNow(o) && self.settings.botLevel === 'hard' && o.ai) { self.botGo(o, v.x, v.y, 'report'); }
       }
@@ -524,7 +555,7 @@
     var self = this;
     this.list().forEach(function (o) {
       if (o === p || o.role === 'imp' || self.isGhost(o) || !self.isBotNow(o)) return;
-      if (self.sees(o, p) && Math.random() < self.bp().ventSee) o.witness[p.id] = true;
+      if (self.sees(o, p) && Math.random() < self.bp().ventSee && !o.witness[p.id]) o.witness[p.id] = { t: 'vent' };
     });
   };
   G.ventNext = function (pid) {
@@ -539,7 +570,7 @@
   // ---------- Reuniones y votos ----------
   G.startMeeting = function (reason, callerId, victimId) {
     var self = this;
-    this.list().forEach(function (p) { p.busy = null; p.vent = null; p.input = { x: 0, y: 0 }; p.vote = undefined; p.ready = false; p.ai = null; });
+    this.list().forEach(function (p) { p.busy = null; p.vent = null; p.input = { x: 0, y: 0 }; p.vote = undefined; p.ready = false; p.ai = null; p.talkVote = null; });
     this.lightsOut = false;
     this.reactorAt = 0;
     this.shownProg = this.taskProgress();
@@ -557,7 +588,7 @@
           var pt = o.pairs[key];
           if (self.now - pt <= self.bp().memory && pt <= b.t + 1 && b.t - pt < 3 && pt > bt) { bt = pt; best = parts[1]; }
         }
-        if (best) o.suspects[best] = true;
+        if (best) o.suspects[best] = b.id;   // guardamos junto a quién lo vieron
       });
     });
     var livingHumans = this.list().filter(function (p) { return !self.isGhost(p) && !self.isBotNow(p); }).length;
@@ -565,8 +596,89 @@
       reason: reason, caller: callerId, victim: victimId, sub: 'discuss', startedAt: this.now,
       end: this.now + CFG.splashTime + (livingHumans ? this.settings.discussTime : Math.min(4, this.settings.discussTime))
     };
+    this.makeTalk();
     this.phase = 'meeting';
     this.onEvent('meeting');
+  };
+
+  // ---------- Lo que dicen los bots en la reunión ----------
+  // Cada bot vivo dice una frase (una tras otra). Los tripulantes cuentan lo que saben;
+  // los impostores mienten sobre dónde estaban y acusan a otros. Se muestra en la tele y en los móviles.
+  G.makeTalk = function () {
+    var self = this, m = this.meeting, B = this.bp(), lvl = this.settings.botLevel;
+    var talk = [], claims = {};
+    var last = this.bodies.length ? this.bodies[this.bodies.length - 1] : null;
+    var victimBody = m.victim ? this.bodies.filter(function (b) { return b.id === m.victim; })[0] : null;
+    var ref = victimBody || last;                 // el congelado del que se habla
+    var rooms = MAP.rooms.map(function (r) { return r.id; });
+    var living = this.list().filter(function (o) { return !self.isGhost(o); });
+    function alive(id) { var o = self.players[id]; return o && !self.isGhost(o); }
+    function roomOf(o) { return ref && ref.where && ref.where.hasOwnProperty(o.id) ? ref.where[o.id] : MAP.roomAt(o.x, o.y); }
+    function say(o, k, a) { talk.push([o.id, k, a || {}]); }
+    // alguien que estaba con o (en la misma sala) cuando congelaron
+    function buddy(o) {
+      if (!ref || !ref.where) return null;
+      var r = ref.where[o.id];
+      if (!r) return null;
+      var c = Object.keys(ref.where).filter(function (id) { return id !== o.id && id !== ref.id && ref.where[id] === r && alive(id); });
+      return c.length ? pick(c) : null;
+    }
+    var bots = shuffle(living.filter(function (o) { return self.isBotNow(o); }));
+    // quien convocó la reunión habla primero
+    bots.sort(function (a, b) { return (b.id === m.caller) - (a.id === m.caller); });
+    var accused = {};   // a quién han acusado de verdad (para que el impostor se defienda)
+    bots.forEach(function (o) {
+      if (o.role === 'crew') {
+        var w = null;
+        for (var id in o.witness) if (alive(id)) { w = id; break; }
+        if (w) accused[w] = o.id;
+      }
+    });
+    bots.forEach(function (o) {
+      var isCaller = o.id === m.caller;
+      if (o.role === 'imp') {
+        if (isCaller && m.reason === 'report' && victimBody) { say(o, 'found', { v: m.victim, r: victimBody.room }); return; }
+        var crew = living.filter(function (x) { return x.role !== 'imp' && x !== o; });
+        if (accused[o.id] && lvl !== 'easy' && alive(accused[o.id])) { say(o, 'liar', { x: accused[o.id] }); o.talkVote = accused[o.id]; return; }
+        if (lvl === 'easy' && Math.random() < 0.4) { say(o, 'nervous'); return; }
+        var accuseP = lvl === 'hard' ? 0.5 : lvl === 'normal' ? 0.35 : 0.15;
+        if (crew.length && Math.random() < accuseP) {
+          var x = pick(crew).id; say(o, 'sus', { x: x }); o.talkVote = x; return;
+        }
+        // coartada falsa: una sala en la que no estaba
+        var real = roomOf(o), fake = pick(rooms.filter(function (r) { return r !== real; })) || real;
+        say(o, 'alone' + Math.floor(Math.random() * 2), { r: fake });
+        return;
+      }
+      // Tripulante
+      var wit = null;
+      for (var wid in o.witness) if (alive(wid)) { wit = wid; break; }
+      if (wit) {
+        var info = o.witness[wit] || {};
+        if (info.t === 'vent') say(o, 'sawVent', { x: wit });
+        else say(o, info.v ? 'sawFreeze' : 'sawFreeze2', { x: wit, v: info.v });
+        claims[wit] = (claims[wit] || 0) + 1;
+        return;
+      }
+      if (isCaller && m.reason === 'report' && victimBody) { say(o, 'found', { v: m.victim, r: victimBody.room }); return; }
+      var sus = null;
+      for (var sid in (o.suspects || {})) if (alive(sid)) { sus = sid; break; }
+      if (sus) { say(o, 'wasWith', { x: sus, v: o.suspects[sus] }); claims[sus] = (claims[sus] || 0) + 0.5; return; }
+      if (isCaller && m.reason !== 'report') { say(o, 'button'); return; }
+      if (lvl === 'easy' && Math.random() < 0.35) { say(o, 'nothing' + Math.floor(Math.random() * 2)); return; }
+      var r = roomOf(o), bud = buddy(o);
+      if (bud) say(o, 'withMe', { r: r, x: bud });
+      else say(o, 'alone' + Math.floor(Math.random() * 2), { r: r });
+    });
+    var gap = talk.length > 6 ? 1.1 : 1.5;
+    m.talk = talk.map(function (x, i) { return [CFG.splashTime + 0.6 + i * gap].concat(x); });
+    m.claims = claims;
+  };
+  G.talkNow = function () {
+    var m = this.meeting;
+    if (!m || !m.talk) return [];
+    var since = this.now - m.startedAt;
+    return m.talk.filter(function (x) { return x[0] <= since || m.sub === 'vote'; }).map(function (x) { return x.slice(1); });
   };
   G.voters = function () {
     var self = this;
@@ -659,8 +771,10 @@
       for (var k in hv) if (hv[k] > n) { top = k; n = hv[k]; }
       return top;
     }
+    var claims = (this.meeting && this.meeting.claims) || {};
     if (p.role === 'imp') {
       var crew = candidates.filter(function (o) { return o.role !== 'imp'; });
+      if (p.talkVote && self.players[p.talkVote] && !self.isGhost(self.players[p.talkVote]) && Math.random() < 0.8) return p.talkVote;
       var pile = topVote(function () { return true; });
       if (pile && self.players[pile].role !== 'imp' && Math.random() < B.impFollow) return pile;
       if (this.settings.botLevel !== 'easy' && crew.length && Math.random() < 0.4) return pick(crew).id;
@@ -670,6 +784,9 @@
       var w = this.players[id];
       if (w && !this.isGhost(w) && Math.random() < 0.95) return id;
     }
+    // si otro tripulante ha dicho «¡lo he visto!», le hacen caso
+    var claimed = Object.keys(claims).filter(function (id) { var o = self.players[id]; return o && !self.isGhost(o) && id !== p.id; });
+    if (claimed.length && Math.random() < B.follow + 0.25) return claimed.sort(function (a, b) { return claims[b] - claims[a]; })[0];
     var hTop = topVote(function (o) { return !self.isBotNow(o); });
     if (hTop && Math.random() < B.follow) return hTop;
     var sus = Object.keys(p.suspects || {}).filter(function (id) { var o = self.players[id]; return o && !self.isGhost(o); });
@@ -976,6 +1093,7 @@
       });
       s.myVote = p.vote === undefined ? null : p.vote;
       s.iReady = p.ready ? 1 : 0;
+      s.talk = this.talkNow();
       return s;
     }
     if (this.phase === 'eject') {
@@ -996,5 +1114,13 @@
   root.NaveGame = Game;
   root.NAVE_COLORS = COLORS;
   root.NAVE_CFG = CFG;
+  // Texto de una frase de bot: e = [quién, clave, datos]; nameOf(id) da el nombre
+  root.NAVE_TALK = function (e, nameOf) {
+    var a = e[2] || {}, rm = a.r ? MAP.room(a.r) : null;
+    return root.I18N.t('talk.' + e[1], {
+      x: a.x ? nameOf(a.x) : '', v: a.v ? nameOf(a.v) : '',
+      r: rm ? root.I18N.t(rm.name) : root.I18N.t('talk.corridor')
+    });
+  };
   if (typeof module !== 'undefined') module.exports = { Game: Game, COLORS: COLORS, CFG: CFG };
 })(typeof window !== 'undefined' ? window : globalThis);
