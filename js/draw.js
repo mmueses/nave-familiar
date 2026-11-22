@@ -83,7 +83,7 @@
     var sp = spriteOf(look);
     if (sp) {
       var hh = spriteChar(ctx, x, y, hex, opts, sp);
-      if (L && !opts.ghost && !opts.ice) L.fx(ctx, x, y, look, T, sc);
+      if (L && !opts.ghost && !opts.ice) L.fx(ctx, x, y, look, T, sc, hh - 17);
       if (opts.name) nameTag(ctx, x, y - (hh - 17 + 4) * sc, opts, sc);
       return;
     }

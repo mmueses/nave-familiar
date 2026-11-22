@@ -14,12 +14,23 @@
     ],
     fx: [
       { id: 'none', lv: 1 }, { id: 'sparkles', lv: 3 }, { id: 'hearts', lv: 4 }, { id: 'bubbles', lv: 5 }, { id: 'leaves', lv: 6 },
-      { id: 'snow', lv: 7 }, { id: 'flames', lv: 9 }, { id: 'stars', lv: 11 }, { id: 'rainbow', lv: 15 }
+      { id: 'snow', lv: 7 }, { id: 'flames', lv: 9 }, { id: 'stars', lv: 11 }, { id: 'rainbow', lv: 15 },
+      // Efectos inspirados en los personajes (nivel provisional: de momento todo está desbloqueado, ver UNLOCK_ALL)
+      { id: 'electric', lv: 6 }, { id: 'crystals', lv: 5 }, { id: 'gears', lv: 4 }, { id: 'notes', lv: 3 }, { id: 'film', lv: 5 },
+      { id: 'static', lv: 4 }, { id: 'galaxy', lv: 12 }, { id: 'fireflies', lv: 6 }, { id: 'spores', lv: 5 }, { id: 'petals', lv: 3 },
+      { id: 'sakura', lv: 8 }, { id: 'bees', lv: 7 }, { id: 'sand', lv: 6 }, { id: 'embers', lv: 9 }, { id: 'smoke', lv: 4 },
+      { id: 'coins', lv: 10 }, { id: 'gems', lv: 11 }, { id: 'eyes', lv: 8 }, { id: 'slime', lv: 5 }, { id: 'bolts', lv: 6 },
+      { id: 'rain', lv: 7 }, { id: 'feathers', lv: 4 }, { id: 'shadow', lv: 13 }, { id: 'runes', lv: 12 }, { id: 'radar', lv: 7 },
+      { id: 'jellies', lv: 9 }, { id: 'balloons', lv: 3 }, { id: 'sparks', lv: 8 }, { id: 'planets', lv: 14 }, { id: 'confetti', lv: 2 }
     ]
   };
   // Personajes (imágenes): todos disponibles desde el principio
   var PD = root.PERSONAJES_DATA || (typeof require !== 'undefined' ? (function () { try { return require('./personajes-data.js'); } catch (e) { return []; } })() : []);
   LIST.ch = PD.map(function (d) { return { id: d[0], lv: 1, es: d[5], en: d[6] }; });
+  // Mientras se prueban: todo desbloqueado. Para bloquear por nivel, poner UNLOCK_ALL = false
+  // (los niveles de cada cosa ya están en «lv»).
+  var UNLOCK_ALL = true;
+  function unlocked(it, level) { return UNLOCK_ALL || it.lv <= level; }
   function find(slot, id) { var l = LIST[slot] || []; for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i]; return null; }
   function valid(look) {
     var out = { hat: 'none', suit: 'none', fx: 'none' };
@@ -31,7 +42,7 @@
     var o = {};
     if (LIST.ch.length) o.ch = LIST.ch[Math.floor(Math.random() * LIST.ch.length)].id;
     ['hat', 'suit', 'fx'].forEach(function (k) {
-      var ok = LIST[k].filter(function (it) { return it.lv <= level; });
+      var ok = LIST[k].filter(function (it) { return unlocked(it, level); });
       o[k] = Math.random() < (k === 'fx' ? 0.25 : 0.55) ? ok[Math.floor(Math.random() * ok.length)].id : 'none';
     });
     return o;
@@ -136,10 +147,126 @@
     return Math.max(t[look.hat] || 37, t[look.suit] || 37);
   }
   // Efectos alrededor (en coordenadas del mundo)
-  function fx(ctx, x, y, look, t, sc) {
+
+  // ---- Efectos inspirados en los personajes ----
+  // Cada uno: n partículas, «mov» (rise sube · fall cae · orbit gira · wander revolotea · burst estalla · ring ondas) y dibujo d(ctx, x, y, i, ph, t)
+  function star(ctx, x, y, r, pts, inner) { ctx.beginPath(); for (var k = 0; k < pts * 2; k++) { var a = -Math.PI / 2 + k * Math.PI / pts, rr = k % 2 ? r * (inner || 0.45) : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); }
+  function glow(ctx, x, y, r, col) { var g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+  var NFX = {
+    electric: { n: 4, mov: 'orbit', d: function (c, x, y, i, ph, t) {
+      if (Math.sin(t * 23 + i * 5) < -0.2) return;
+      c.strokeStyle = i % 2 ? '#7fd8ff' : '#c9f2ff'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x, y - 5);
+      for (var k = 1; k <= 4; k++) c.lineTo(x + (k % 2 ? 2.5 : -2.5), y - 5 + k * 2.6); c.stroke(); glow(c, x, y, 6, 'rgba(120,210,255,0.35)'); } },
+    crystals: { n: 5, mov: 'rise', d: function (c, x, y, i, ph, t) {
+      c.save(); c.translate(x, y); c.rotate(t * 1.5 + i); c.fillStyle = ['#b48cff', '#e2c6ff', '#8fd3ff'][i % 3]; c.strokeStyle = '#5a3a9a'; c.lineWidth = 0.6;
+      c.beginPath(); c.moveTo(0, -4); c.lineTo(2.2, 0); c.lineTo(0, 4); c.lineTo(-2.2, 0); c.closePath(); c.fill(); c.stroke(); c.restore(); } },
+    gears: { n: 3, mov: 'orbit', d: function (c, x, y, i, ph, t) {
+      c.save(); c.translate(x, y); c.rotate((i % 2 ? -1 : 1) * t * 2); c.fillStyle = i % 2 ? '#b8bcc8' : '#d8a54a'; c.strokeStyle = '#3a3d4a'; c.lineWidth = 0.7;
+      star(c, 0, 0, 4.2, 8, 0.72); c.fill(); c.stroke(); c.fillStyle = '#3a3d4a'; c.beginPath(); c.arc(0, 0, 1.2, 0, 7); c.fill(); c.restore(); } },
+    notes: { n: 4, mov: 'rise', d: function (c, x, y, i, ph, t) {
+      x += Math.sin(t * 3 + i) * 2; c.fillStyle = ['#ffd23f', '#ff8ad8', '#8fd3ff', '#9cf08c'][i % 4]; c.strokeStyle = c.fillStyle; c.lineWidth = 1;
+      c.beginPath(); c.ellipse(x, y + 2, 1.8, 1.3, -0.4, 0, 7); c.fill(); c.beginPath(); c.moveTo(x + 1.6, y + 1.8); c.lineTo(x + 1.6, y - 4); c.lineTo(x + 4, y - 3); c.stroke(); } },
+    film: { n: 3, mov: 'orbit', d: function (c, x, y, i, ph, t) {
+      c.save(); c.translate(x, y); c.rotate(Math.sin(t + i) * 0.4); c.fillStyle = '#26262e'; c.fillRect(-4, -3, 8, 6); c.fillStyle = '#ffe9a6'; c.fillRect(-2.6, -1.8, 5.2, 3.6);
+      c.fillStyle = '#dcdcdc'; for (var k = -3; k <= 3; k += 2) { c.fillRect(k - 0.4, -2.8, 0.8, 0.6); c.fillRect(k - 0.4, 2.2, 0.8, 0.6); } c.restore(); } },
+    static: { n: 10, mov: 'wander', d: function (c, x, y, i, ph, t) {
+      var v = Math.floor((Math.sin(t * 40 + i * 9) + 1) * 110); c.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')'; c.fillRect(x, y, 1.6, 1.6); } },
+    galaxy: { n: 6, mov: 'orbit', d: function (c, x, y, i, ph, t) {
+      if (i < 2) { glow(c, x, y, 7, i ? 'rgba(160,90,255,0.45)' : 'rgba(80,140,255,0.4)'); return; }
+      c.fillStyle = '#ffffff'; star(c, x, y, 2 + (i % 2), 4, 0.35); c.fill(); } },
+    fireflies: { n: 6, mov: 'wander', d: function (c, x, y, i, ph, t) {
+      var a = (Math.sin(t * 4 + i * 2) + 1) / 2; glow(c, x, y, 5, 'rgba(220,255,90,' + (0.5 * a) + ')'); c.fillStyle = 'rgba(250,255,170,' + (0.4 + a * 0.6) + ')'; c.beginPath(); c.arc(x, y, 1.2, 0, 7); c.fill(); } },
+    spores: { n: 7, mov: 'rise', slow: 0.45, d: function (c, x, y, i, ph, t) {
+      x += Math.sin(t * 2 + i * 3) * 3; glow(c, x, y, 4, i % 2 ? 'rgba(190,120,255,0.6)' : 'rgba(120,255,200,0.6)'); } },
+    petals: { n: 5, mov: 'fall', d: function (c, x, y, i, ph, t) {
+      x += Math.sin(t * 2 + i) * 4; c.fillStyle = i % 2 ? '#ff9ac8' : '#ffc2de'; c.beginPath(); c.ellipse(x, y, 3, 1.6, t * 2 + i, 0, 7); c.fill(); } },
+    sakura: { n: 4, mov: 'fall', slow: 0.6, d: function (c, x, y, i, ph, t) {
+      x += Math.sin(t * 1.5 + i) * 5; c.save(); c.translate(x, y); c.rotate(t + i); c.fillStyle = '#ffd0e4';
+      for (var k = 0; k < 5; k++) { c.rotate(Math.PI * 2 / 5); c.beginPath(); c.ellipse(0, -2, 1.3, 2, 0, 0, 7); c.fill(); } c.fillStyle = '#ff7fb0'; c.beginPath(); c.arc(0, 0, 0.9, 0, 7); c.fill(); c.restore(); } },
+    bees: { n: 3, mov: 'orbit', fast: 1.8, d: function (c, x, y, i, ph, t) {
+      c.fillStyle = 'rgba(255,255,255,0.75)'; c.beginPath(); c.ellipse(x - 1, y - 2.4 + Math.sin(t * 40) * 0.6, 1.6, 1, -0.5, 0, 7); c.ellipse(x + 1, y - 2.4, 1.6, 1, 0.5, 0, 7); c.fill();
+      c.fillStyle = '#ffcc1f'; c.strokeStyle = '#1a1a2e'; c.lineWidth = 0.6; c.beginPath(); c.ellipse(x, y, 2.8, 2, 0, 0, 7); c.fill(); c.stroke();
+      c.fillStyle = '#1a1a2e'; c.fillRect(x - 0.6, y - 1.8, 1, 3.6); } },
+    sand: { n: 9, mov: 'fall', fast: 1.3, d: function (c, x, y, i, ph, t) { c.fillStyle = i % 2 ? '#e8c06a' : '#f3d792'; c.fillRect(x, y, 1.6, 1.6); c.fillRect(x + 2, y - 3, 1.2, 1.2); } },
+    embers: { n: 7, mov: 'rise', fast: 1.4, d: function (c, x, y, i, ph, t) {
+      x += Math.sin(t * 5 + i) * 1.5; glow(c, x, y, 3.5, 'rgba(255,120,30,0.7)'); c.fillStyle = '#ffd36b'; c.fillRect(x - 0.6, y - 0.6, 1.2, 1.2); } },
+    smoke: { n: 4, mov: 'rise', slow: 0.5, d: function (c, x, y, i, ph, t) {
+      c.fillStyle = 'rgba(170,170,185,' + (0.55 * (1 - ph)) + ')'; c.beginPath(); c.arc(x, y, 2.5 + ph * 5, 0, 7); c.fill(); } },
+    coins: { n: 4, mov: 'rise', d: function (c, x, y, i, ph, t) {
+      var w = Math.abs(Math.cos(t * 5 + i)) * 2.8 + 0.4; c.fillStyle = '#ffcf3a'; c.strokeStyle = '#a8761a'; c.lineWidth = 0.7; c.beginPath(); c.ellipse(x, y, w, 2.8, 0, 0, 7); c.fill(); c.stroke(); } },
+    gems: { n: 5, mov: 'orbit', d: function (c, x, y, i, ph, t) {
+      c.fillStyle = ['#ff5c8a', '#5ce1e6', '#9cf08c', '#ffd23f', '#b48cff'][i]; c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 0.6;
+      c.beginPath(); c.moveTo(x - 2.6, y - 1); c.lineTo(x - 1.4, y - 2.6); c.lineTo(x + 1.4, y - 2.6); c.lineTo(x + 2.6, y - 1); c.lineTo(x, y + 2.8); c.closePath(); c.fill(); c.stroke(); } },
+    eyes: { n: 4, mov: 'orbit', slow: 0.5, d: function (c, x, y, i, ph, t) {
+      var o = Math.max(0.12, Math.abs(Math.sin(t * 1.3 + i * 2))); c.fillStyle = '#ffffff'; c.strokeStyle = '#1a1a2e'; c.lineWidth = 0.6;
+      c.beginPath(); c.ellipse(x, y, 3, 2.2 * o, 0, 0, 7); c.fill(); c.stroke(); if (o > 0.3) { c.fillStyle = '#3e7bfa'; c.beginPath(); c.arc(x + 0.5, y, 1.2, 0, 7); c.fill(); } } },
+    slime: { n: 5, mov: 'fall', d: function (c, x, y, i, ph, t) {
+      c.fillStyle = i % 2 ? '#6ff2c9' : '#9cf08c'; c.beginPath(); c.moveTo(x, y - 3); c.quadraticCurveTo(x + 2.2, y + 0.5, x, y + 1.8); c.quadraticCurveTo(x - 2.2, y + 0.5, x, y - 3); c.fill(); } },
+    bolts: { n: 5, mov: 'orbit', d: function (c, x, y, i, ph, t) {
+      c.save(); c.translate(x * (0.6 + 0.4 * Math.abs(Math.sin(t * 2 + i))), y); c.rotate(t * 3 + i); c.fillStyle = '#c6cad6'; c.strokeStyle = '#4a4e5c'; c.lineWidth = 0.6;
+      if (i % 2) { star(c, 0, 0, 2.6, 6, 0.86); c.fill(); c.stroke(); c.fillStyle = '#4a4e5c'; c.beginPath(); c.arc(0, 0, 0.9, 0, 7); c.fill(); } else { c.fillRect(-0.7, -3, 1.4, 5); c.strokeRect(-0.7, -3, 1.4, 5); c.fillRect(-1.8, -3.6, 3.6, 1.2); }
+      c.restore(); } },
+    rain: { n: 7, mov: 'fall', fast: 1.6, cloud: true, d: function (c, x, y, i, ph, t) {
+      c.strokeStyle = 'rgba(140,200,255,0.9)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x * 0.8, y); c.lineTo(x * 0.8 - 0.8, y + 3); c.stroke(); } },
+    feathers: { n: 3, mov: 'fall', slow: 0.55, d: function (c, x, y, i, ph, t) {
+      x += Math.sin(t * 2 + i * 2) * 6; c.save(); c.translate(x, y); c.rotate(Math.sin(t * 2 + i) * 0.7); c.fillStyle = ['#f2ead8', '#d9c09a', '#ffd23f'][i % 3];
+      c.beginPath(); c.ellipse(0, 0, 1.8, 4.5, 0, 0, 7); c.fill(); c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 0.5; c.beginPath(); c.moveTo(0, -4.5); c.lineTo(0, 5.5); c.stroke(); c.restore(); } },
+    shadow: { n: 5, mov: 'rise', slow: 0.6, d: function (c, x, y, i, ph, t) {
+      glow(c, x * 0.7 + Math.sin(t * 2 + i) * 3, y, 6, 'rgba(90,30,150,' + (0.6 * (1 - ph)) + ')'); if (i === 0) { c.fillStyle = '#c69bff'; c.fillRect(x * 0.7 - 2, y, 1.2, 1); c.fillRect(x * 0.7 + 1, y, 1.2, 1); } } },
+    runes: { n: 4, mov: 'orbit', slow: 0.6, d: function (c, x, y, i, ph, t) {
+      c.strokeStyle = 'rgba(130,255,150,' + (0.55 + 0.45 * Math.sin(t * 3 + i)) + ')'; c.lineWidth = 1; c.beginPath();
+      if (i % 4 === 0) { c.moveTo(x - 2, y + 3); c.lineTo(x, y - 3); c.lineTo(x + 2, y + 3); c.moveTo(x - 1, y); c.lineTo(x + 1, y); }
+      else if (i % 4 === 1) { c.moveTo(x, y - 3); c.lineTo(x, y + 3); c.moveTo(x, y - 1); c.lineTo(x + 2, y - 3); c.moveTo(x, y + 1); c.lineTo(x - 2, y - 1); }
+      else if (i % 4 === 2) { c.arc(x, y, 2.4, 0, 7); c.moveTo(x - 3, y); c.lineTo(x + 3, y); }
+      else { c.moveTo(x - 2, y - 3); c.lineTo(x + 2, y - 3); c.lineTo(x - 2, y + 3); c.lineTo(x + 2, y + 3); }
+      c.stroke(); } },
+    radar: { n: 3, mov: 'ring', d: function (c, x, y, i, ph, t) {
+      c.strokeStyle = 'rgba(120,230,255,' + (0.8 * (1 - ph)) + ')'; c.lineWidth = 1.2; c.beginPath(); c.arc(0, -30, 3 + ph * 22, -2.4, -0.7); c.stroke(); } },
+    jellies: { n: 3, mov: 'rise', slow: 0.5, d: function (c, x, y, i, ph, t) {
+      var p = 1 + Math.sin(t * 4 + i) * 0.15; c.fillStyle = i % 2 ? 'rgba(160,220,255,0.85)' : 'rgba(255,170,230,0.85)'; c.beginPath(); c.ellipse(x, y, 3.2 * p, 2.4 / p, 0, Math.PI, 0); c.fill();
+      c.strokeStyle = c.fillStyle; c.lineWidth = 0.6; c.beginPath(); for (var k = -2; k <= 2; k += 2) { c.moveTo(x + k, y); c.quadraticCurveTo(x + k + Math.sin(t * 5 + k) * 1.2, y + 2.5, x + k, y + 5); } c.stroke(); } },
+    balloons: { n: 3, mov: 'rise', slow: 0.55, d: function (c, x, y, i, ph, t) {
+      x += Math.sin(t * 1.5 + i) * 2; c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = 0.5; c.beginPath(); c.moveTo(x, y + 3); c.quadraticCurveTo(x + 1, y + 6, x, y + 8); c.stroke();
+      c.fillStyle = ['#ff5c5c', '#3e7bfa', '#ffd23f'][i % 3]; c.strokeStyle = 'rgba(0,0,0,0.4)'; c.lineWidth = 0.6; c.beginPath(); c.ellipse(x, y, 2.8, 3.4, 0, 0, 7); c.fill(); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,0.6)'; c.beginPath(); c.arc(x - 1, y - 1.3, 0.7, 0, 7); c.fill(); } },
+    sparks: { n: 8, mov: 'burst', d: function (c, x, y, i, ph, t) {
+      c.strokeStyle = 'rgba(255,' + Math.floor(200 + 55 * (1 - ph)) + ',90,' + (1 - ph) + ')'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, y); c.lineTo(x * 0.85, y * 0.85 - 2); c.stroke(); } },
+    planets: { n: 3, mov: 'orbit', slow: 0.5, d: function (c, x, y, i, ph, t) {
+      c.fillStyle = ['#f0a35a', '#6fb6ff', '#c7a6ff'][i]; c.beginPath(); c.arc(x, y, 2.8, 0, 7); c.fill();
+      if (i !== 1) { c.strokeStyle = 'rgba(255,240,200,0.9)'; c.lineWidth = 0.8; c.beginPath(); c.ellipse(x, y, 4.6, 1.3, -0.3, 0, 7); c.stroke(); } } },
+    confetti: { n: 9, mov: 'fall', d: function (c, x, y, i, ph, t) {
+      c.save(); c.translate(x, y); c.rotate(t * 4 + i); c.fillStyle = ['#ff5c8a', '#ffd23f', '#5ce1e6', '#9cf08c', '#b48cff'][i % 5]; c.fillRect(-1.6, -0.8, 3.2, 1.6); c.restore(); } }
+  };
+  function drawNFX(ctx, E, t) {
+    var sp = E.fast || E.slow || 1;
+    if (E.cloud) {   // nubecita encima de la cabeza
+      ctx.globalAlpha = 0.95; ctx.fillStyle = '#9aa6bd'; ctx.beginPath(); ctx.arc(-9, -48, 6.5, 0, 7); ctx.arc(0, -51, 8, 0, 7); ctx.arc(9, -47, 6, 0, 7); ctx.fill();
+    }
+    for (var i = 0; i < E.n; i++) {
+      var ph = (t * 0.6 * sp + i / E.n) % 1, ang = i * (Math.PI * 2 / E.n) + t * 0.9 * sp, x, y;
+      var side = i % 2 ? 1 : -1;   // a los lados del personaje, para que se vean
+      if (E.mov === 'rise') { x = side * (15 + (i % 3) * 5); y = -2 - ph * 46; ctx.globalAlpha = Math.sin(ph * Math.PI); }
+      else if (E.mov === 'fall') { x = side * (14 + ((i >> 1) % 3) * 6); y = -50 + ph * 58; ctx.globalAlpha = Math.sin(ph * Math.PI); }
+      else if (E.mov === 'orbit') { x = Math.cos(ang) * 26; y = -18 + Math.sin(ang) * 11; ctx.globalAlpha = 0.95; }
+      else if (E.mov === 'wander') { x = Math.sin(t * 0.9 * sp + i * 1.7) * 26; y = -20 + Math.cos(t * 1.3 * sp + i * 2.9) * 20; ctx.globalAlpha = 1; }
+      else if (E.mov === 'burst') { var a = i * (Math.PI * 2 / E.n) + Math.floor(t * 0.8) * 0.7, r = 14 + ph * 22; x = Math.cos(a) * r; y = -18 + Math.sin(a) * r; ctx.globalAlpha = 1; }
+      else { x = 0; y = 0; ctx.globalAlpha = 1; }
+      var S = 1.45;   // partículas más grandes
+      ctx.save(); ctx.scale(S, S); E.d(ctx, x / S, y / S, i, ph, t); ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // top: altura del personaje con imagen (los efectos se pensaron para el astronauta, de unos 38 de alto)
+  function fx(ctx, x, y, look, t, sc, top) {
     var f = look && look.fx;
     if (!f || f === 'none') return;
     ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+    if (NFX[f]) {
+      var k = top ? Math.max(1, top / 40) * 1.1 : 1;
+      ctx.translate(0, 10); ctx.scale(k, k); ctx.translate(0, -10);
+      drawNFX(ctx, NFX[f], t); ctx.restore(); return;
+    }
     for (var i = 0; i < 5; i++) {
       var ph = (t * 0.6 + i / 5) % 1, ang = i * 1.3 + t * 0.4;
       var px = Math.cos(ang) * (14 + i * 2), py = -10 - ph * 34;
@@ -157,6 +284,6 @@
   }
 
   function chName(id, lang) { var it = find('ch', id); return it ? (lang === 'en' ? it.en : it.es) : id; }
-  root.LOOKS = { chName: chName, LIST: LIST, find: find, valid: valid, randomFor: randomFor, back: back, body: body, head: head, hat: hat, fx: fx, topOf: topOf, OUT: OUT };
+  root.LOOKS = { UNLOCK_ALL: UNLOCK_ALL, unlocked: unlocked, chName: chName, LIST: LIST, find: find, valid: valid, randomFor: randomFor, back: back, body: body, head: head, hat: hat, fx: fx, topOf: topOf, OUT: OUT };
   if (typeof module !== 'undefined') module.exports = root.LOOKS;
 })(typeof window !== 'undefined' ? window : globalThis);

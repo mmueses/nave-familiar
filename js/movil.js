@@ -334,7 +334,7 @@
       var trial = {}; for (var k in look) trial[k] = look[k]; trial[lookTab] = it.id;
       b.appendChild(DRAW.avatarCanvas(hexOf(myColor), 64, { look: trial }));
       var nm = document.createElement('span'); nm.textContent = lookTab === 'ch' ? LOOKS.chName(it.id, I18N.lang) : t('item.' + it.id); b.appendChild(nm);
-      if (it.lv > lv) { b.disabled = true; var lk = document.createElement('i'); lk.textContent = t('look.locked', { n: it.lv }); b.appendChild(lk); }
+      if (!LOOKS.unlocked(it, lv)) { b.disabled = true; var lk = document.createElement('i'); lk.textContent = t('look.locked', { n: it.lv }); b.appendChild(lk); }
       b.onclick = function () {
         var nl = curLook(); nl[lookTab] = it.id;
         store.set('nave.look', JSON.stringify(nl));
