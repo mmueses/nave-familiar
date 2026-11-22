@@ -73,6 +73,7 @@
     if (c.length !== 4) { $('joinErr').textContent = t('ph.notFound'); return; }
     if (!n) { $('name').focus(); return; }
     store.set('nave.name', n); store.set('nave.code', c);
+    if (conn || connecting) return;   // ya conectando (doble toque)
     code = c; stopRetry = false; joinedOnce = false;
     $('joinErr').textContent = '';
     connect(true);
@@ -83,16 +84,21 @@
     send({ t: 'hello', pid: pid, name: store.get('nave.name') || $('name').value, color: myColor });
   }
   function send(o) { if (conn) conn.send(o); }
+  var connecting = false;
   function connect(first) {
+    if (connecting) return;
+    connecting = true;
     wait(first ? t('ph.connecting') : t('ph.lost'));
     NET.join(code, {
       onOpen: function (w) {
+        connecting = false;
         conn = w; lastData = Date.now();
         w.onData = onData;
         w.onClose = function () { if (conn === w) { conn = null; scheduleRetry(); } };
         sendHello();
       },
       onError: function (e) {
+        connecting = false;
         if (first && !joinedOnce) {
           show('sJoin');
           $('joinErr').textContent = e === 'notfound' ? t('ph.notFound') : t('ph.lost');
@@ -126,7 +132,10 @@
   }
 
   // ---------- Modo solo: la partida corre en este mismo dispositivo ----------
+  var soloStarted = false;
   function startSolo() {
+    if (soloStarted) return;   // evita dos partidas a la vez si se toca dos veces
+    soloStarted = true;
     var g = new NaveGame();
     g.join(pid, store.get('nave.name'), myColor);
     conn = { send: function (o) { soloMsg(g, o); }, close: function () {} };
