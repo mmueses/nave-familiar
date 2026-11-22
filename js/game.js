@@ -31,7 +31,8 @@
     this.players = {};
     this.order = [];
     this.phase = 'lobby';
-    this.settings = { total: 8, impostors: 1, botLevel: 'easy' };
+    this.settings = Game.defaultSettings();
+    this.gameNo = 0;
     this.now = 0;
     this.bodies = [];
     this.lightsOut = false;
@@ -44,6 +45,35 @@
     this.onEvent = function () {};
     this.botCount = 0;
   }
+  // Ajustes de partida (como en Among Us). vals: valores posibles; el primero de 'def' es el normal.
+  Game.SETTINGS = [
+    { k: 'speed',        vals: [0.75, 1, 1.25, 1.5],        def: 1,        fmt: 'x' },
+    { k: 'crewVision',   vals: [0.5, 0.75, 1, 1.25, 1.5],   def: 1,        fmt: 'x' },
+    { k: 'impVision',    vals: [0.75, 1, 1.25, 1.5, 1.75],  def: 1.25,     fmt: 'x' },
+    { k: 'freezeCd',     vals: [10, 15, 20, 25, 30, 45, 60], def: 25,      fmt: 's' },
+    { k: 'freezeRange',  vals: ['short', 'normal', 'long'], def: 'normal', fmt: 'opt' },
+    { k: 'tasks',        vals: [3, 4, 5, 6, 7, 8],          def: 5,        fmt: 'n' },
+    { k: 'meetings',     vals: [0, 1, 2, 3],                def: 1,        fmt: 'n' },
+    { k: 'discussTime',  vals: [0, 15, 30, 45, 60, 90],     def: 30,       fmt: 's' },
+    { k: 'voteTime',     vals: [15, 30, 45, 60, 90, 120],   def: 30,       fmt: 's' },
+    { k: 'confirmEjects', vals: [true, false],              def: true,     fmt: 'yn' },
+    { k: 'taskBar',      vals: ['always', 'meetings', 'never'], def: 'always', fmt: 'opt' },
+    { k: 'anonVotes',    vals: [false, true],               def: false,    fmt: 'yn' }
+  ];
+  Game.defaultSettings = function () {
+    var s = { total: 8, impostors: 1, botLevel: 'easy' };
+    Game.SETTINGS.forEach(function (d) { s[d.k] = d.def; });
+    return s;
+  };
+  // Dificultad de los bots
+  Game.BOT = {
+    easy:   { speed: 0.7,  task: [9, 14], idle: [4, 9], huntDelay: [8, 18], wander: 0.3,  notice: 0.45, witness: 0.6,  ventSee: 0.3, lightsDelay: 6, reactorDelay: 4,   reactorFixers: 2,
+              follow: 0.65, suspect: 0,    freeze: 0.8, sab: 0.025, reactorShare: 0.3,  ventEscape: 0.5,  selfReport: 0,    impFollow: 0.3,  memory: 0 },
+    normal: { speed: 0.8,  task: [6, 10], idle: [2, 5], huntDelay: [2, 7], wander: 0.15, notice: 0.75, witness: 0.85, ventSee: 0.7, lightsDelay: 4, reactorDelay: 2.5, reactorFixers: 2,
+              follow: 0.5,  suspect: 0.2,  freeze: 4,   sab: 0.04,  reactorShare: 0.4,  ventEscape: 0.75, selfReport: 0.1,  impFollow: 0.6,  memory: 20 },
+    hard:   { speed: 0.92, task: [5, 8],  idle: [1, 2], huntDelay: [0, 0.5], wander: 0.05, notice: 0.95, witness: 1,    ventSee: 1,   lightsDelay: 2, reactorDelay: 1.5, reactorFixers: 3,
+              follow: 0.35, suspect: 0.35, freeze: 10,  sab: 0.06,  reactorShare: 0.3,  ventEscape: 0.95, selfReport: 0.2,  impFollow: 0.85, memory: 30 }
+  };
   // Máximo de impostores según jugadores: 5-6 → 1, 7-9 → 2, 10-12 → 3
   Game.maxImps = function (n) { return Math.max(1, Math.min(3, Math.floor((n - 1) / 3))); };
   var G = Game.prototype;
@@ -71,12 +101,14 @@
   };
 
   // Devuelve 'ok' | 'full' | 'inGame'
-  G.join = function (pid, name, color) {
+  G.join = function (pid, name, color, level) {
+    level = Math.max(1, Math.min(999, parseInt(level, 10) || 1));
     var p = this.players[pid];
     name = String(name || '').trim().slice(0, 12) || ('Jugador' + (this.humans().length + 1));
     if (p) {
       p.connected = true;
       p.discAt = 0;
+      p.level = level;
       if (this.phase === 'lobby') {
         p.name = name;
         if (typeof color === 'number' && color >= 0 && color < COLORS.length && !this.colorTaken(color, pid)) p.color = color;
@@ -86,7 +118,7 @@
     if (this.phase !== 'lobby') return 'inGame';
     if (this.humans().length >= CFG.maxHumans) return 'full';
     if (!(typeof color === 'number' && color >= 0 && color < COLORS.length) || this.colorTaken(color, pid)) color = this.freeColor(pid);
-    this.players[pid] = { id: pid, name: name, color: color, bot: false, connected: true, discAt: 0 };
+    this.players[pid] = { id: pid, name: name, color: color, bot: false, connected: true, discAt: 0, level: level };
     this.order.push(pid);
     return 'ok';
   };
@@ -110,6 +142,9 @@
     if (n >= CFG.minTotal && n <= CFG.maxTotal) this.settings.total = n;
     var k = parseInt(s.impostors, 10);
     if (k >= 1 && k <= 3) this.settings.impostors = k;
+    if (s.botLevel && Game.BOT[s.botLevel]) this.settings.botLevel = s.botLevel;
+    var self = this;
+    Game.SETTINGS.forEach(function (d) { if (s.hasOwnProperty(d.k) && d.vals.indexOf(s[d.k]) >= 0) self.settings[d.k] = s[d.k]; });
     this.settings.impostors = Math.min(this.settings.impostors, Game.maxImps(Math.max(this.settings.total, this.humans().length)));
   };
 
@@ -140,18 +175,21 @@
       p.input = { x: 0, y: 0 };
       p.busy = null;
       p.vent = null;
-      p.meetingsLeft = 1;
+      p.meetingsLeft = self.settings.meetings;
+      p.stats = { tasks: 0, freezes: 0 };
+      if (p.bot) p.level = p.level || (1 + Math.floor(Math.random() * 30));
       p.freezeAt = 0; p.sabAt = 0;
-      p.tasks = shuffle(taskIds.slice()).slice(0, CFG.tasksPerPlayer).map(function (sid) { return { sid: sid, done: false }; });
+      p.tasks = shuffle(taskIds.slice()).slice(0, self.settings.tasks).map(function (sid) { return { sid: sid, done: false }; });
       p.witness = {};
       p.ai = null;
       p.vote = undefined; p.ready = false;
     });
     this.bodies = [];
-    this.lightsOut = false; this.reactorAt = 0;
+    this.lightsOut = false; this.reactorAt = 0; this.shownProg = 0;
     this.meeting = null; this.ejectRes = null; this.endRes = null;
     this.placeAtSpawn();
-    this.resetCooldowns(CFG.freezeCdStart, CFG.sabCdStart);
+    this.gameNo++;
+    this.resetCooldowns(Math.min(CFG.freezeCdStart, this.settings.freezeCd), CFG.sabCdStart);
     this.startedAt = this.now;
     this.phase = 'intro';
     this.phaseEnd = this.now + CFG.introTime;
@@ -191,14 +229,16 @@
   };
 
   // ---------- Utilidades ----------
+  G.bp = function () { return Game.BOT[this.settings.botLevel] || Game.BOT.easy; };
+  G.freezeRange = function () { return { short: 40, normal: 55, long: 75 }[this.settings.freezeRange] || 55; };
   G.isGhost = function (p) { return !p.alive || p.ejected; };
   // Un bot solo maneja a un jugador desconectado si es TRIPULANTE (para que sus tareas no bloqueen la partida).
   // Un impostor desconectado NUNCA lo maneja un bot: se queda quieto hasta que vuelva.
   G.isBotNow = function (p) { return p.bot || (!p.connected && p.role === 'crew' && this.now - p.discAt > CFG.botTakeover); };
   G.visionOf = function (p) {
     if (this.isGhost(p)) return CFG.ghostVision;
-    if (p.role === 'imp') return CFG.impVision;
-    return this.lightsOut ? CFG.visionDark : CFG.vision;
+    if (p.role === 'imp') return 185 * this.settings.impVision;
+    return (this.lightsOut ? CFG.visionDark : CFG.vision) * this.settings.crewVision;
   };
   // ¿p puede ver el punto q? (distancia + sin paredes en medio; los fantasmas ven a través de las paredes)
   G.sees = function (p, q, extra) {
@@ -218,6 +258,13 @@
     return total ? done / total : 0;
   };
   G.crisis = function () { return this.reactorAt > 0; };
+  // Barra de tareas según el ajuste: siempre / solo se actualiza en reuniones / nunca (null)
+  G.visibleProgress = function () {
+    var m = this.settings.taskBar;
+    if (m === 'never') return null;
+    var v = m === 'meetings' ? (this.shownProg || 0) : this.taskProgress();
+    return Math.round(v * 100) / 100;
+  };
 
   // ---------- Bucle ----------
   G.tick = function (dt) {
@@ -240,7 +287,7 @@
         if (!this.checkWin()) {
           this.bodies = [];
           this.placeAtSpawn();
-          this.resetCooldowns(CFG.freezeCd * 0.6, CFG.sabCdStart);
+          this.resetCooldowns(this.settings.freezeCd * 0.6, CFG.sabCdStart);
           this.phase = 'play';
           this.onEvent('play');
         }
@@ -252,7 +299,8 @@
     if (p.busy || p.vent) return;
     var ix = p.input.x, iy = p.input.y;
     if (!ix && !iy) return;
-    var nx = p.x + ix * CFG.speed * dt, ny = p.y + iy * CFG.speed * dt;
+    var sp = CFG.speed * this.settings.speed;
+    var nx = p.x + ix * sp * dt, ny = p.y + iy * sp * dt;
     if (MAP.walkable(nx, ny, CFG.radius)) { p.x = nx; p.y = ny; }
     else if (MAP.walkable(nx, p.y, CFG.radius)) { p.x = nx; }
     else if (MAP.walkable(p.x, ny, CFG.radius)) { p.y = ny; }
@@ -329,7 +377,7 @@
     if (s.type === 'lights') { if (this.lightsOut) { this.lightsOut = false; this.onEvent('lightsOn'); } return; }
     if (s.type === 'reactor') { if (this.reactorAt) { this.reactorAt = 0; this.onEvent('reactorOff'); } return; }
     if (s.type === 'cameras' || s.type === 'admin') return;
-    p.tasks.forEach(function (t) { if (t.sid === sid) t.done = true; });
+    p.tasks.forEach(function (t) { if (t.sid === sid && !t.done) { t.done = true; p.stats.tasks++; } });
     this.onEvent('task');
   };
   G.taskCancel = function (pid) {
@@ -339,7 +387,7 @@
 
   G.freezeTarget = function (p) {
     if (p.role !== 'imp' || this.isGhost(p) || p.vent || this.now < p.freezeAt) return null;
-    var best = null, bd = CFG.freezeRange;
+    var best = null, bd = this.freezeRange();
     this.list().forEach(function (o) {
       if (o.role === 'imp' || !o.alive || o.ejected) return;
       var d = dist(p, o);
@@ -356,12 +404,17 @@
     v.busy = null;
     v.input = { x: 0, y: 0 };
     v.ai = null;
-    this.bodies.push({ id: v.id, x: v.x, y: v.y });
-    p.freezeAt = this.now + CFG.freezeCd;
+    this.bodies.push({ id: v.id, x: v.x, y: v.y, t: this.now });
+    p.freezeAt = this.now + this.settings.freezeCd;
+    p.stats.freezes++;
     var self = this;
     this.list().forEach(function (o) {
       if (o === p || o === v || self.isGhost(o)) return;
-      if (self.sees(o, v) && self.sees(o, p)) o.witness[p.id] = true;
+      if (self.sees(o, v) && self.sees(o, p) && (!self.isBotNow(o) || Math.random() < self.bp().witness)) {
+        o.witness[p.id] = true;
+        // los bots difíciles avisan enseguida si lo han visto
+        if (self.isBotNow(o) && self.settings.botLevel === 'hard' && o.ai) { self.botGo(o, v.x, v.y, 'report'); }
+      }
     });
     this.onEvent('freeze');
     this.checkWin();
@@ -406,11 +459,20 @@
   G.vent = function (pid) {
     var p = this.players[pid];
     if (!p || this.phase !== 'play') return;
-    if (p.vent) { p.vent = null; this.onEvent('vent'); return; }   // salir
+    if (p.vent) { p.vent = null; this.ventSeen(p); this.onEvent('vent'); return; }   // salir
     var v = this.ventNear(p);
     if (!v) return;
     p.vent = v.id; p.x = v.x; p.y = v.y; p.input = { x: 0, y: 0 };
+    this.ventSeen(p);
     this.onEvent('vent');
+  };
+  // Los bots que ven a alguien entrar o salir de una rejilla sospechan de él
+  G.ventSeen = function (p) {
+    var self = this;
+    this.list().forEach(function (o) {
+      if (o === p || o.role === 'imp' || self.isGhost(o) || !self.isBotNow(o)) return;
+      if (self.sees(o, p) && Math.random() < self.bp().ventSee) o.witness[p.id] = true;
+    });
   };
   G.ventNext = function (pid) {
     var p = this.players[pid];
@@ -427,10 +489,28 @@
     this.list().forEach(function (p) { p.busy = null; p.vent = null; p.input = { x: 0, y: 0 }; p.vote = undefined; p.ready = false; p.ai = null; });
     this.lightsOut = false;
     this.reactorAt = 0;
+    this.shownProg = this.taskProgress();
+    // los bots (normal y difícil) sospechan de quien vieron cerca del congelado poco antes
+    this.list().forEach(function (o) {
+      o.suspects = {};
+      if (!o.pairs) return;
+      // de todos los congelados desde la última reunión: ¿con quién se les vio por última vez?
+      self.bodies.forEach(function (b) {
+        var best = null, bt = -Infinity;
+        for (var key in o.pairs) {
+          var parts = key.split('|');
+          if (parts[0] !== b.id || parts[1] === o.id || parts[1] === b.id) continue;
+          // solo cuenta si estaban juntos justo antes de que lo congelaran
+          var pt = o.pairs[key];
+          if (self.now - pt <= self.bp().memory && pt <= b.t + 1 && b.t - pt < 3 && pt > bt) { bt = pt; best = parts[1]; }
+        }
+        if (best) o.suspects[best] = true;
+      });
+    });
     var livingHumans = this.list().filter(function (p) { return !self.isGhost(p) && !self.isBotNow(p); }).length;
     this.meeting = {
       reason: reason, caller: callerId, victim: victimId, sub: 'discuss', startedAt: this.now,
-      end: this.now + CFG.splashTime + (livingHumans ? CFG.discussTime : 4)
+      end: this.now + CFG.splashTime + (livingHumans ? this.settings.discussTime : Math.min(4, this.settings.discussTime))
     };
     this.phase = 'meeting';
     this.onEvent('meeting');
@@ -463,8 +543,9 @@
       if (this.now >= m.end || (allReady && this.now - m.startedAt > CFG.splashTime)) {
         m.sub = 'vote';
         m.voteStart = this.now;
-        m.end = this.now + CFG.voteTime;
-        voters.forEach(function (p) { if (self.isBotNow(p)) p.voteAt = self.now + rnd(CFG.voteTime * 0.35, CFG.voteTime * 0.75); });
+        var vt = this.settings.voteTime;
+        m.end = this.now + vt;
+        voters.forEach(function (p) { if (self.isBotNow(p)) p.voteAt = self.now + rnd(vt * 0.35, vt * 0.75); });
         this.onEvent('voteStart');
       }
       return;
@@ -499,38 +580,54 @@
       res.wasImp = e.role === 'imp';
     }
     res.impsLeft = this.aliveImps().length;
+    res.confirm = this.settings.confirmEjects;
+    res.anon = this.settings.anonVotes;
+    if (!res.confirm) { delete res.wasImp; res.impsLeft = null; }
     res.votes = {};
-    this.voters().forEach(function (p) { res.votes[p.id] = p.vote === undefined ? null : p.vote; });
+    this.voters().forEach(function (p, i) { res.votes[res.anon ? ('a' + i) : p.id] = p.vote === undefined ? null : p.vote; });
     this.ejectRes = res;
     this.meeting = null;
+    this.list().forEach(function (o) { o.pairs = {}; });
     this.phase = 'eject';
     this.phaseEnd = this.now + CFG.ejectTime;
     this.onEvent('eject');
   };
 
   G.botVote = function (p) {
-    var self = this;
+    var self = this, B = this.bp();
     var candidates = this.voters().filter(function (o) { return o !== p; });
+    // votos de las personas hasta ahora (así cuenta lo que habláis en voz alta)
+    function topVote(filter) {
+      var hv = {};
+      self.voters().forEach(function (o) {
+        if (o.vote && o.vote !== 'skip' && o.vote !== p.id && filter(o)) hv[o.vote] = (hv[o.vote] || 0) + 1;
+      });
+      var top = null, n = 0;
+      for (var k in hv) if (hv[k] > n) { top = k; n = hv[k]; }
+      return top;
+    }
     if (p.role === 'imp') {
       var crew = candidates.filter(function (o) { return o.role !== 'imp'; });
+      var pile = topVote(function () { return true; });
+      if (pile && self.players[pile].role !== 'imp' && Math.random() < B.impFollow) return pile;
+      if (this.settings.botLevel !== 'easy' && crew.length && Math.random() < 0.4) return pick(crew).id;
       return Math.random() < 0.6 || !crew.length ? 'skip' : pick(crew).id;
     }
     for (var id in p.witness) {
       var w = this.players[id];
-      if (w && !this.isGhost(w) && Math.random() < 0.85) return id;
+      if (w && !this.isGhost(w) && Math.random() < 0.95) return id;
     }
-    // Sigue a lo que han votado las personas (así cuenta lo que habláis en voz alta)
-    var hv = {};
-    this.voters().forEach(function (o) {
-      if (!self.isBotNow(o) && o.vote && o.vote !== 'skip' && o.vote !== p.id) hv[o.vote] = (hv[o.vote] || 0) + 1;
-    });
-    var top = null, topN = 0;
-    for (var k in hv) if (hv[k] > topN) { top = k; topN = hv[k]; }
-    if (top && Math.random() < 0.65) return top;
-    return Math.random() < 0.75 || !candidates.length ? 'skip' : pick(candidates).id;
+    var hTop = topVote(function (o) { return !self.isBotNow(o); });
+    if (hTop && Math.random() < B.follow) return hTop;
+    var sus = Object.keys(p.suspects || {}).filter(function (id) { var o = self.players[id]; return o && !self.isGhost(o); });
+    if (sus.length && Math.random() < B.suspect) return pick(sus);
+    if (hTop && Math.random() < 0.5) return hTop;
+    // sin pistas: casi siempre saltan (los difíciles casi nunca votan al azar)
+    var rand = { easy: 0.25, normal: 0.12, hard: 0.04 }[this.settings.botLevel] || 0.25;
+    return Math.random() > rand || !candidates.length ? 'skip' : pick(candidates).id;
   };
 
-  // ---------- Bots (nivel fácil) ----------
+  // ---------- Bots (fácil, normal, difícil) ----------
   G.nearestNodeTo = function (x, y) {
     var room = MAP.roomAt(x, y);
     if (room) return room;
@@ -570,12 +667,22 @@
       return;
     }
 
-    // Ver cuerpos congelados (fácil: no siempre se dan cuenta)
+    var B = this.bp();
+    // Ver cuerpos congelados (fácil: no siempre se dan cuenta) y recordar a quién se ha visto
     if (!ghost && ai.then !== 'report' && this.now >= (ai.nextLook || 0)) {
       ai.nextLook = this.now + 1;
+      if (B.memory && p.role === 'crew') {
+        // recuerda quién estaba junto a quién (para sospechar de quien estuvo con el congelado)
+        p.pairs = p.pairs || {};
+        var vis = this.list().filter(function (o) { return o !== p && !self.isGhost(o) && !o.vent && self.sees(p, o); });
+        vis.push(p);
+        for (var a = 0; a < vis.length; a++) for (var c = a + 1; c < vis.length; c++) {
+          if (dist(vis[a], vis[c]) < 110) { p.pairs[vis[a].id + '|' + vis[c].id] = self.now; p.pairs[vis[c].id + '|' + vis[a].id] = self.now; }
+        }
+      }
       for (var i = 0; i < this.bodies.length; i++) {
         var b = this.bodies[i];
-        if (this.sees(p, b) && Math.random() < (p.role === 'imp' ? 0.03 : 0.45)) {
+        if (this.sees(p, b) && Math.random() < (p.role === 'imp' ? 0.03 : B.notice)) {
           this.botGo(p, b.x, b.y, 'report');
           break;
         }
@@ -584,21 +691,34 @@
 
     // Impostor
     if (p.role === 'imp' && !ghost) {
-      if (this.canSabotage(p, 'lights') && Math.random() < dt * 0.03) this.sabotage(p.id, Math.random() < 0.35 ? 'reactor' : 'lights');
+      if (this.canSabotage(p, 'lights') && Math.random() < dt * B.sab) this.sabotage(p.id, Math.random() < B.reactorShare ? 'reactor' : 'lights');
       var tgt = this.freezeTarget(p);
-      if (tgt && this.aloneWith(p, tgt) && Math.random() < dt * 2) {
+      if (tgt && this.aloneWith(p, tgt) && Math.random() < dt * B.freeze) {
+        var victimPos = { x: tgt.x, y: tgt.y };
         this.freeze(p.id);
         ai.hunt = null;
         // a veces huye por una rejilla
         var near = null, nd = 260;
         MAP.vents.forEach(function (v) { var d = dist(p, v); if (d < nd && MAP.clear(p.x, p.y, v.x, v.y)) { nd = d; near = v; } });
-        if (near && Math.random() < 0.6) { ai.path = [{ x: near.x, y: near.y }]; ai.then = 'vent'; ai.sid = null; }
+        if (Math.random() < B.selfReport) { ai.path = [{ x: victimPos.x + 20, y: victimPos.y }]; ai.then = 'report'; ai.wait = 0; }
+        else if (near && Math.random() < B.ventEscape) { ai.path = [{ x: near.x, y: near.y }]; ai.then = 'vent'; ai.sid = null; }
         else { ai.path = null; ai.wait = this.now + rnd(0.5, 1.5); }
         return;
       }
-      if (this.now >= p.freezeAt && !ai.hunt && ai.then !== 'report' && ai.then !== 'vent') {
+      if (this.now >= p.freezeAt && ai.huntAt === undefined) ai.huntAt = this.now + rnd(B.huntDelay[0], B.huntDelay[1]);
+      if (this.now < p.freezeAt) ai.huntAt = undefined;
+      if (this.now >= p.freezeAt && this.now >= ai.huntAt && !ai.hunt && ai.then !== 'report' && ai.then !== 'vent') {
         var crew = this.aliveCrew();
-        if (crew.length) ai.hunt = { id: pick(crew).id, until: this.now + 20, replan: 0 };
+        if (crew.length) {
+          var target = pick(crew);
+          if (this.settings.botLevel !== 'easy') {
+            // el más aislado (con menos gente cerca)
+            var best = null, bn = Infinity;
+            crew.forEach(function (c) { var n = crew.filter(function (o) { return o !== c && dist(o, c) < 250; }).length + Math.random(); if (n < bn) { bn = n; best = c; } });
+            if (best && (this.settings.botLevel === 'hard' || Math.random() < 0.5)) target = best;
+          }
+          ai.hunt = { id: target.id, until: this.now + 20, replan: 0 };
+        }
       }
       if (ai.hunt && ai.then !== 'vent') {
         var h = this.players[ai.hunt.id];
@@ -614,8 +734,8 @@
     // Arreglar sabotajes (fácil: tardan un poco)
     if (!ghost && p.role === 'crew' && ai.then !== 'fix' && ai.then !== 'report') {
       var fixSid = null;
-      if (this.reactorAt && this.now - this.reactorStart > 4 && this.fixers('rx', 2).indexOf(p) >= 0) fixSid = 'rx';
-      else if (this.lightsOut && this.now - this.lightsAt > 6 && this.fixers('lt', 1).indexOf(p) >= 0) fixSid = 'lt';
+      if (this.reactorAt && this.now - this.reactorStart > B.reactorDelay && this.fixers('rx', B.reactorFixers).indexOf(p) >= 0) fixSid = 'rx';
+      else if (this.lightsOut && this.now - this.lightsAt > B.lightsDelay && this.fixers('lt', 1).indexOf(p) >= 0) fixSid = 'lt';
       if (fixSid) {
         var fs = MAP.station(fixSid);
         this.botGo(p, fs.x, fs.y, 'fix', fixSid);
@@ -627,7 +747,7 @@
 
     if (ai.path && ai.path.length) {
       var target = ai.path[0];
-      var step = CFG.speed * 0.7 * dt;
+      var step = CFG.speed * this.settings.speed * this.bp().speed * dt;
       var d = Math.hypot(target.x - p.x, target.y - p.y);
       if (d <= step) { p.x = target.x; p.y = target.y; ai.path.shift(); }
       else { p.x += (target.x - p.x) / d * step; p.y += (target.y - p.y) / d * step; }
@@ -660,7 +780,7 @@
       var s = MAP.station(sid);
       if (s && dist(p, s) <= CFG.useRange && this.stationUsable(p, s)) {
         p.busy = s.id;
-        ai.busyUntil = this.now + (then === 'fix' ? rnd(2, 3.5) : rnd(7, 12));
+        ai.busyUntil = this.now + (then === 'fix' ? rnd(2, 3.5) : rnd(this.bp().task[0], this.bp().task[1]));
         return;
       }
     } else if (then === 'vent') {
@@ -672,12 +792,12 @@
       ai.wait = this.now + 0.3;
       return;
     }
-    ai.wait = this.now + rnd(3, 8);
+    ai.wait = this.now + rnd(this.bp().idle[0], this.bp().idle[1]);
   };
   G.botChoose = function (p) {
     if (p.role === 'crew') {
       var todo = p.tasks.filter(function (t) { return !t.done; });
-      if (todo.length && Math.random() < 0.7) {
+      if (todo.length && Math.random() < 1 - this.bp().wander) {
         todo.sort(function (a, b) { return dist(p, MAP.station(a.sid)) - dist(p, MAP.station(b.sid)); });
         var s = MAP.station(todo[0].sid);
         this.botGo(p, s.x, s.y, 'task', s.id);
@@ -696,7 +816,7 @@
   // ---------- Lo que ve cada móvil ----------
   G.roster = function () {
     var out = {};
-    this.list().forEach(function (p) { out[p.id] = { n: p.name, c: p.color, b: p.bot ? 1 : 0 }; });
+    this.list().forEach(function (p) { out[p.id] = { n: p.name, c: p.color, b: p.bot ? 1 : 0, l: p.level || 1 }; });
     return out;
   };
   G.snapshot = function (pid) {
@@ -706,7 +826,7 @@
     s.host = this.hostPid();
     if (this.phase === 'lobby' || !p || !p.role) {
       s.ph = this.phase === 'lobby' ? 'lobby' : 'spectator';
-      s.players = this.humans().map(function (h) { return { id: h.id, n: h.name, c: h.color, on: h.connected }; });
+      s.players = this.humans().map(function (h) { return { id: h.id, n: h.name, c: h.color, on: h.connected, l: h.level || 1 }; });
       s.settings = this.settings;
       s.me = p ? { id: p.id, n: p.name, c: p.color } : null;
       return s;
@@ -733,7 +853,7 @@
       s.vr = vr;
       s.dark = this.lightsOut ? 1 : 0;
       s.reactor = this.reactorAt ? Math.max(0, Math.ceil(this.reactorAt - this.now)) : 0;
-      s.prog = Math.round(this.taskProgress() * 100) / 100;
+      s.prog = this.visibleProgress();
       s.ps = [];
       this.list().forEach(function (o) {
         if (o === p || o.vent) return;
@@ -808,6 +928,8 @@
     if (this.phase === 'end') {
       s.res = this.endRes; s.roster = this.roster();
       s.iWon = (this.endRes.winner === 'crew') === (p.role === 'crew') ? 1 : 0;
+      s.stats = { tasks: p.stats ? p.stats.tasks : 0, freezes: p.stats ? p.stats.freezes : 0, role: p.role };
+      s.gameNo = this.gameNo;
       return s;
     }
     return s;

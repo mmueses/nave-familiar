@@ -53,7 +53,7 @@
 
   // ---------- Red (servidor común en js/servidor.js) ----------
   var server = new NaveServer(game, {
-    onChange: function () { if (game.phase === 'lobby') renderLobby(); },
+    onChange: function () { AJUSTES.save(game.settings); if (game.phase === 'lobby') renderLobby(); },
     onStatus: function (st) {
       $('lost').classList.toggle('hidden', st === 'ready' || st === 'opening');
       if (st === 'ready' && game.phase === 'lobby') renderLobby();
@@ -65,6 +65,12 @@
     var base = location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
     return base + 'movil.html?sala=' + server.code + NET.testParams();
   }
+  // ajustes guardados en esta tele
+  game.setSettings(AJUSTES.load() || {});
+  var refreshSettings = AJUSTES.build($('setPanel'), function () { return game.settings; }, function (ch) { game.setSettings(ch); settingsChanged(); });
+  function settingsChanged() { AJUSTES.save(game.settings); refreshSettings(); renderLobby(); }
+  $('btnSettings').onclick = function () { refreshSettings(); $('setModal').classList.remove('hidden'); setTimeout(function () { $('setClose').focus(); }, 50); };
+  $('setClose').onclick = function () { $('setModal').classList.add('hidden'); };
   function startServer(c) {
     try { localStorage.setItem('nave.tvcode', c); } catch (e) {}
     server.open(c);
@@ -95,8 +101,9 @@
     humans.forEach(function (h) {
       var card = document.createElement('div');
       card.className = 'pcard' + (h.connected ? '' : ' off');
-      card.appendChild(DRAW.avatarCanvas(COLORS[h.color].hex, Math.max(48, Math.round(window.innerWidth * 0.06))));
+      card.appendChild(DRAW.avatarCanvas(COLORS[h.color].hex, Math.max(48, Math.round(window.innerWidth * 0.06)), { look: h.look }));
       var n = document.createElement('div'); n.textContent = h.name; card.appendChild(n);
+      var lv = document.createElement('div'); lv.className = 'lvl'; lv.textContent = t('xp.short', { n: h.level || 1 }); card.appendChild(lv);
       list.appendChild(card);
     });
     var bots = Math.max(0, game.settings.total - humans.length);
@@ -107,6 +114,7 @@
     var ib = $('setImp').querySelectorAll('button');
     for (var k = 0; k < ib.length; k++) ib[k].disabled = +ib[k].getAttribute('data-v') > maxI;
     segOn('setLang', I18N.lang);
+    segOn('setBot', game.settings.botLevel);
     $('btnStart').disabled = !humans.length;
     if (game.phase === 'lobby') show('sLobby');
   }
@@ -122,6 +130,7 @@
   $('totalPlus').onclick = function () { game.setSettings({ total: game.settings.total + 1 }); renderLobby(); };
   bindSeg('setImp', function (v) { game.setSettings({ impostors: +v }); });
   bindSeg('setLang', function (v) { setLang(v); });
+  bindSeg('setBot', function (v) { game.setSettings({ botLevel: v }); AJUSTES.save(game.settings); });
   function setLang(l) { I18N.set(l); I18N.apply(); lastScreen = null; }
   $('btnStart').onclick = function () { startGame(); };
   $('btnFs').onclick = function () {
@@ -171,7 +180,9 @@
   var lastAlarm = -1;
   function renderPlay() {
     show('sPlay');
-    $('taskFill').style.width = Math.round(game.taskProgress() * 100) + '%';
+    var vp = game.visibleProgress();
+    $('taskFill').parentNode.style.visibility = vp === null ? 'hidden' : '';
+    $('taskFill').style.width = Math.round((vp || 0) * 100) + '%';
     var secs = Math.floor(game.now - game.startedAt);
     $('clock').textContent = Math.floor(secs / 60) + ':' + ('0' + (secs % 60)).slice(-2);
     $('lightsAlert').classList.toggle('hidden', !game.lightsOut);
@@ -231,7 +242,7 @@
       var a = DRAW.avatarCanvas(hex(r.ejected), Math.round(window.innerHeight * 0.22));
       stage.appendChild(a);
       $('ejectText').textContent = t('tv.ejected', { name: name(r.ejected) });
-      $('ejectSub').textContent = r.wasImp ? t('tv.wasImp', { name: name(r.ejected) }) : t('tv.wasNotImp', { name: name(r.ejected) });
+      $('ejectSub').textContent = !r.confirm ? '' : (r.wasImp ? t('tv.wasImp', { name: name(r.ejected) }) : t('tv.wasNotImp', { name: name(r.ejected) }));
     } else {
       $('ejectText').textContent = t('tv.noEject');
       $('ejectSub').textContent = r.tie ? t('tv.tie') : t('tv.skipped');

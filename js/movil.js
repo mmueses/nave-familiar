@@ -80,7 +80,10 @@
   };
 
   // ---------- Conexión ----------
-  function sendHello() { send({ t: 'hello', pid: pid, name: store.get('nave.name') || $('name').value, color: myColor }); }
+  function xpTotal() { return parseInt(store.get('nave.xp'), 10) || 0; }
+  function myLevel() { return AJUSTES.levelInfo(xpTotal()).level; }
+  function sendHello() { send({ t: 'hello', pid: pid, name: store.get('nave.name') || $('name').value, color: myColor, lvl: myLevel(), look: myLook() }); }
+  function myLook() { try { return JSON.parse(store.get('nave.look') || 'null'); } catch (e) { return null; } }
   function send(o) { if (conn) conn.send(o); }
   function connect(first) {
     if (connecting) return;
@@ -135,8 +138,9 @@
     if (soloStarted) return;   // evita dos partidas a la vez si se toca dos veces
     soloStarted = true;
     var g = new NaveGame();
+    g.setSettings(AJUSTES.load() || {});
     server = new NaveServer(g, {
-      onChange: function () { uiKey.lobby = null; },
+      onChange: function () { uiKey.lobby = null; AJUSTES.save(g.settings); },
       onStatus: function () { uiKey.room = null; if (s && s.ph === 'lobby') renderRoom(); },
       onLang: function (l) { I18N.set(l); I18N.apply(); uiKey = {}; }
     });
@@ -185,6 +189,9 @@
       $('meAvatar').innerHTML = '';
       $('meAvatar').appendChild(DRAW.avatarCanvas(hexOf(me.c), 90));
       $('meName').textContent = me.n;
+      var li = AJUSTES.levelInfo(xpTotal());
+      $('meLevelTxt').textContent = t('xp.level', { n: li.level });
+      $('meXp').style.width = Math.round(li.into / li.need * 100) + '%';
       var taken = s.players.filter(function (p) { return p.id !== pid; }).map(function (p) { return p.c; });
       buildSwatches($('sw2'), taken);
       var list = $('lobbyList'); list.innerHTML = '';
@@ -192,11 +199,13 @@
         var d = document.createElement('div');
         d.appendChild(DRAW.avatarCanvas(hexOf(p.c), 46));
         var nm = document.createElement('span'); nm.textContent = p.n; d.appendChild(nm);
+        var lv = document.createElement('span'); lv.className = 'lvl'; lv.textContent = t('xp.short', { n: p.l || 1 }); d.appendChild(lv);
         list.appendChild(d);
       });
       $('hostBox').classList.toggle('hidden', s.host !== pid);
       $('pTotalVal').textContent = s.settings.total;
-      seg('pImp', s.settings.impostors); seg('pLang', s.lang);
+      seg('pImp', s.settings.impostors); seg('pLang', s.lang); seg('pBot', s.settings.botLevel);
+      if (refreshSettings) refreshSettings();
       var maxI = NaveGame.maxImps(Math.max(s.settings.total, s.players.length));
       var ib = $('pImp').querySelectorAll('button');
       for (var k = 0; k < ib.length; k++) ib[k].disabled = +ib[k].getAttribute('data-v') > maxI;
@@ -214,6 +223,10 @@
   $('pPlus').onclick = function () { if (s && s.settings) send({ t: 'set', s: { total: s.settings.total + 1 } }); };
   bindSeg('pImp', function (v) { send({ t: 'set', s: { impostors: +v } }); });
   bindSeg('pLang', function (v) { send({ t: 'set', s: {}, lang: v }); });
+  bindSeg('pBot', function (v) { send({ t: 'set', s: { botLevel: v } }); });
+  var refreshSettings = AJUSTES.build($('setPanel'), function () { return (s && s.settings) || NaveGame.defaultSettings(); }, function (ch) { send({ t: 'set', s: ch }); });
+  $('btnSettings').onclick = function () { refreshSettings(); $('setModal').classList.remove('hidden'); };
+  $('setClose').onclick = function () { $('setModal').classList.add('hidden'); };
   $('btnStart').onclick = function () { send({ t: 'start' }); };
 
   // ---------- Presentación del papel (secreto), con todos en fila ----------
@@ -265,7 +278,8 @@
       var box = $('taskBox');
       box.innerHTML = '';
       var bar = document.createElement('div'); bar.className = 'bar';
-      var fill = document.createElement('div'); fill.style.width = Math.round(s.prog * 100) + '%'; bar.appendChild(fill); box.appendChild(bar);
+      var fill = document.createElement('div'); fill.style.width = Math.round((s.prog || 0) * 100) + '%'; bar.appendChild(fill);
+      if (s.prog !== null && s.prog !== undefined) box.appendChild(bar);
       var b = document.createElement('b'); b.textContent = imp ? t('ph.fakeTasks') : t('ph.myTasks'); box.appendChild(b);
       me.tasks.forEach(function (x) {
         var d = document.createElement('div');
@@ -629,7 +643,7 @@
       if (s.myVote === p.id) b.classList.add('mine');
       b.appendChild(DRAW.avatarCanvas(rcol(p.id), 40, { frozen: !p.alive }));
       var n = document.createElement('span'); n.style.flex = '1';
-      n.textContent = rname(p.id) + (p.id === pid ? ' ★' : '');
+      n.textContent = rname(p.id) + (p.id === pid ? ' ★' : '') + '  · ' + t('xp.short', { n: (s.roster[p.id] && s.roster[p.id].l) || 1 });
       b.appendChild(n);
       if (p.voted) { var v = document.createElement('span'); v.textContent = '✔'; v.style.color = '#30a46c'; b.appendChild(v); }
       b.disabled = !canVote || !p.alive;
@@ -652,15 +666,16 @@
     if (!ejectAnim || ejectAnim.res !== JSON.stringify(r)) ejectAnim = { res: JSON.stringify(r), t0: performance.now(), color: r.ejected ? s.roster[r.ejected].c : null };
     $('ejectCv').classList.remove('hidden');
     $('btnLobby').classList.add('hidden');
+    $('xpBox').classList.add('hidden');
     $('infoIcon').textContent = '';
     $('infoTitle').textContent = '';
     var typed = s.since > 2;
     if (r.ejected) {
       $('infoText').textContent = t('tv.ejected', { name: rname(r.ejected) });
-      $('infoSub').textContent = typed ? (r.wasImp ? t('tv.wasImp', { name: rname(r.ejected) }) : t('tv.wasNotImp', { name: rname(r.ejected) })) + ' ' + impsLeft(r.impsLeft) : '';
+      $('infoSub').textContent = typed && r.confirm ? (r.wasImp ? t('tv.wasImp', { name: rname(r.ejected) }) : t('tv.wasNotImp', { name: rname(r.ejected) })) + ' ' + impsLeft(r.impsLeft) : '';
     } else {
       $('infoText').textContent = t('tv.noEject');
-      $('infoSub').textContent = typed ? (r.tie ? t('tv.tie') : t('tv.skipped')) + ' ' + impsLeft(r.impsLeft) : '';
+      $('infoSub').textContent = typed ? (r.tie ? t('tv.tie') : t('tv.skipped')) + (r.confirm ? ' ' + impsLeft(r.impsLeft) : '') : '';
     }
   }
   function impsLeft(n) { return n === 0 ? t('tv.impsLeft0') : (n === 1 ? t('tv.impsLeft1') : t('tv.impsLeftN', { n: n })); }
@@ -676,6 +691,29 @@
     $('infoSub').textContent = t({ tasks: 'tv.reasonTasks', ejected: 'tv.reasonEjected', frozen: 'tv.reasonFrozen', reactor: 'tv.reasonReactor' }[r.reason]) + ' ' +
       t('ph.impWas', { names: r.imps.map(rname).join(', ') });
     $('btnLobby').classList.toggle('hidden', s.host !== pid);
+    awardXp();
+  }
+  // Experiencia al terminar la partida (se guarda en este móvil)
+  function awardXp() {
+    var st = s.stats || { tasks: 0, freezes: 0 };
+    var key = (server ? 'H' + server.code : code) + ':' + s.gameNo + ':' + s.res.time;
+    var gain = 20 + (s.iWon ? 30 : 0) + st.tasks * 4 + st.freezes * 6;
+    var before = AJUSTES.levelInfo(xpTotal()).level;
+    if (store.get('nave.lastXp') !== key) {
+      store.set('nave.lastXp', key);
+      store.set('nave.xp', String(xpTotal() + gain));
+      store.set('nave.lastGain', String(gain));
+      store.set('nave.lastBefore', String(before));
+      send({ t: 'lvl', lvl: myLevel() });
+    }
+    var li = AJUSTES.levelInfo(xpTotal()), g2 = parseInt(store.get('nave.lastGain'), 10) || gain;
+    var up = li.level > (parseInt(store.get('nave.lastBefore'), 10) || li.level);
+    $('xpBox').classList.remove('hidden');
+    $('xpGain').textContent = t('xp.gained', { n: g2 });
+    $('xpLevel').textContent = up ? t('xp.levelUp', { n: li.level }) : t('xp.level', { n: li.level });
+    $('xpLevel').className = up ? 'levelUp' : '';
+    $('xpFill').style.width = Math.round(li.into / li.need * 100) + '%';
+    $('xpNext').textContent = t('xp.next', { n: li.need - li.into, m: li.level + 1 });
   }
   $('btnLobby').onclick = function () { send({ t: 'lobby' }); };
 
