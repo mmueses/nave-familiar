@@ -254,7 +254,8 @@
     var total = 0, done = 0;
     this.list().forEach(function (p) {
       if (p.role !== 'crew') return;
-      p.tasks.forEach(function (t) { total++; if (t.done) done++; });
+      var gone = !p.alive || p.ejected;   // los congelados ya no pueden hacer tareas: sus pendientes dejan de contar
+      p.tasks.forEach(function (t) { if (t.done) { total++; done++; } else if (!gone) total++; });
     });
     return total ? done / total : 0;
   };
@@ -355,7 +356,7 @@
     if (s.type === 'lights') return !ghost && this.lightsOut;
     if (s.type === 'reactor') return !ghost && p.role === 'crew' && this.crisis();
     if (s.type === 'cameras' || s.type === 'admin') return !ghost;
-    if (p.role !== 'crew') return false;
+    if (p.role !== 'crew' || ghost) return false;   // congelado: ya no hace tareas
     for (var i = 0; i < p.tasks.length; i++) if (p.tasks[i].sid === s.id && !p.tasks[i].done) return true;
     return false;
   };
@@ -796,7 +797,7 @@
     ai.wait = this.now + rnd(this.bp().idle[0], this.bp().idle[1]);
   };
   G.botChoose = function (p) {
-    if (p.role === 'crew') {
+    if (p.role === 'crew' && !this.isGhost(p)) {
       var todo = p.tasks.filter(function (t) { return !t.done; });
       if (todo.length && Math.random() < 1 - this.bp().wander) {
         todo.sort(function (a, b) { return dist(p, MAP.station(a.sid)) - dist(p, MAP.station(b.sid)); });

@@ -451,7 +451,7 @@
   function pendingStations() {
     if (!s || !s.me) return [];
     var hl = [];
-    if (s.me.role === 'crew') s.me.tasks.forEach(function (x) { if (!x[1]) hl.push(x[0]); });
+    if (s.me.role === 'crew' && !s.me.ghost) s.me.tasks.forEach(function (x) { if (!x[1]) hl.push(x[0]); });
     if (s.dark && !s.me.ghost && s.me.role === 'crew') hl.push('lt');
     if (s.reactor && !s.me.ghost && s.me.role === 'crew') hl.push('rx');
     return hl;
