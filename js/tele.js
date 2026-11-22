@@ -41,6 +41,8 @@
     else if (e === 'eject') beep([400, 350, 300, 250], 0.3, 'triangle');
     else if (e === 'end') beep([523, 659, 784, 1046], 0.2, 'triangle', 0.1);
     else if (e === 'intro') beep([392, 523], 0.25, 'triangle');
+    else if (e === 'reactorOn') beep([880, 440, 880, 440], 0.2, 'sawtooth');
+    else if (e === 'reactorOff') beep([500, 800], 0.12, 'sine');
   };
 
   // Pantalla siempre encendida
@@ -101,7 +103,10 @@
         if (m.a === 'use') game.use(pid);
         else if (m.a === 'freeze') game.freeze(pid);
         else if (m.a === 'report') game.report(pid);
-        else if (m.a === 'sabotage') game.sabotage(pid);
+        else if (m.a === 'sabotage' || m.a === 'lights') game.sabotage(pid, 'lights');
+        else if (m.a === 'reactor') game.sabotage(pid, 'reactor');
+        else if (m.a === 'vent') game.vent(pid);
+        else if (m.a === 'ventNext') game.ventNext(pid);
         else if (m.a === 'ready') game.ready(pid);
         break;
       case 'done': if (pid) game.taskDone(pid, m.sid); break;
@@ -196,7 +201,12 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#0b1026'; ctx.fillRect(0, 0, w, h);
     ctx.setTransform(s, 0, 0, s, (w - M.w * s) / 2, (h - M.h * s) / 2 + 30 * s);
-    DRAW.ship(ctx, { labels: true, t: time, tr: t, lightsOut: game.lightsOut });
+    DRAW.ship(ctx, { labels: true, t: time, tr: t, lightsOut: game.lightsOut, reactor: !!game.reactorAt });
+    if (game.reactorAt) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = 'rgba(255,0,0,' + (0.15 + 0.12 * Math.sin(time * 8)) + ')';
+      ctx.fillRect(0, 0, w, h);
+    }
     if (game.lightsOut) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = 'rgba(0,0,0,' + (0.55 + 0.1 * Math.sin(time * 3)) + ')';
@@ -213,12 +223,19 @@
     $('introTitle').textContent = n === 1 ? t('tv.thereAre1') : t('tv.thereAreN', { n: n });
     show('sIntro');
   }
+  var lastAlarm = -1;
   function renderPlay() {
     show('sPlay');
     $('taskFill').style.width = Math.round(game.taskProgress() * 100) + '%';
     var secs = Math.floor(game.now - game.startedAt);
     $('clock').textContent = Math.floor(secs / 60) + ':' + ('0' + (secs % 60)).slice(-2);
     $('lightsAlert').classList.toggle('hidden', !game.lightsOut);
+    $('reactorAlert').classList.toggle('hidden', !game.reactorAt);
+    if (game.reactorAt) {
+      var left = Math.max(0, Math.ceil(game.reactorAt - game.now));
+      $('reactorAlert').textContent = t('tv.reactor', { n: left });
+      if (left !== lastAlarm) { lastAlarm = left; beep([700], 0.15, 'square', 0.06); }
+    }
   }
   function card(p, extra) {
     var ghost = game.isGhost(p);
@@ -233,6 +250,12 @@
   function renderMeeting() {
     var m = game.meeting;
     show('sMeeting');
+    var splash = game.now - m.startedAt < 2.5;
+    $('tvSplash').classList.toggle('hidden', !splash);
+    if (splash) {
+      $('tvSplash').className = 'tvSplash ' + (m.reason === 'report' ? 'body' : 'meet');
+      $('tvSplashTitle').textContent = m.reason === 'report' ? t('sp.body') : t('sp.meeting');
+    }
     $('mReason').textContent = m.reason === 'report'
       ? t('tv.reportBy', { name: name(m.caller), victim: name(m.victim) })
       : t('tv.buttonBy', { name: name(m.caller) });
@@ -294,7 +317,7 @@
     var nImp = r.imps.length;
     $('endTitle').textContent = r.winner === 'crew' ? t('tv.crewWin') : (nImp > 1 ? t('tv.impsWin') : t('tv.impWin'));
     $('endTitle').style.color = r.winner === 'crew' ? '#6fb6ff' : '#ff6b6b';
-    $('endReason').textContent = t({ tasks: 'tv.reasonTasks', ejected: 'tv.reasonEjected', frozen: 'tv.reasonFrozen' }[r.reason]);
+    $('endReason').textContent = t({ tasks: 'tv.reasonTasks', ejected: 'tv.reasonEjected', frozen: 'tv.reasonFrozen', reactor: 'tv.reasonReactor' }[r.reason]);
     $('endImpLabel').textContent = nImp > 1 ? t('tv.impsWere') : t('tv.impWas');
     var box = $('endImps'); box.innerHTML = '';
     r.imps.forEach(function (id) { var cc = card(game.players[id]); cc.classList.remove('dead'); cc.style.borderColor = '#e5484d'; box.appendChild(cc); });

@@ -9,7 +9,7 @@
 </head>
 <body class="ph">
 
-<div id="sJoin" class="screen">
+<div id="sJoin" class="screen scroll">
   <div class="form">
     <h1 style="text-align:center" data-i18n="app.title"></h1>
     <label for="code" id="codeLabel" data-i18n="ph.code"></label>
@@ -25,7 +25,7 @@
 
 <div id="sWait" class="screen hidden"><h2 id="waitText"></h2></div>
 
-<div id="sLobby" class="screen hidden" style="gap:14px">
+<div id="sLobby" class="screen hidden scroll" style="gap:14px">
   <div class="muted" data-i18n="ph.youAre"></div>
   <div id="meAvatar"></div>
   <h2 id="meName" style="margin:0"></h2>
@@ -41,37 +41,42 @@
   </div>
 </div>
 
-<div id="sIntro" class="screen hidden" style="gap:14px">
-  <div id="introAvatar"></div>
+<div id="sIntro" class="screen hidden intro">
   <div class="role" id="introRole"></div>
-  <div id="introHint" style="font-size:1.1em;max-width:90vw"></div>
-  <div id="introPartner" class="muted"></div>
+  <div id="introSub" class="introSub"></div>
+  <canvas id="lineupCv" class="lineup"></canvas>
+  <div id="introHint" style="font-size:1.05em;max-width:90vw"></div>
+  <div class="muted" data-i18n="ph.tapHide"></div>
   <div class="cover hidden" id="cover" data-i18n="ph.tapHide"></div>
-  <div class="muted" data-i18n="ph.tapHide" id="hideHint"></div>
 </div>
 
 <div id="sPlay" class="screen hidden">
   <canvas id="cv"></canvas>
+  <div class="joyZone" id="joyZone"></div>
+  <div class="joyBase" id="joyBase"><i id="knob"></i></div>
   <div class="hud">
     <div class="tasks" id="taskBox"></div>
-    <div style="margin-left:auto;display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+    <div class="hudRight">
       <div class="rolebadge" id="badge"></div>
       <button class="sec mapbtn" id="btnMap">🗺️</button>
     </div>
   </div>
   <div class="alertbar hidden" id="phLights" data-i18n="ph.lightsOut"></div>
+  <div class="alertbar reactor hidden" id="phReactor"></div>
   <div class="msg hidden" id="ghostMsg" data-i18n="ph.ghost"></div>
-  <div class="joyhint" id="joyHint">🕹️</div>
-  <div class="joy hidden" id="joy"><i id="knob"></i></div>
-  <div class="controls">
-    <button class="act sab hidden" id="bSab"><span data-i18n="ph.sabotage"></span><span class="cd hidden"></span></button>
+  <div class="msg hidden" id="ventMsg" data-i18n="ph.inVent"></div>
+  <div class="controls" id="controls">
+    <button class="act sab hidden" id="bLights"><span data-i18n="ph.lights"></span><span class="cd hidden"></span></button>
+    <button class="act sab hidden" id="bReactor"><span data-i18n="ph.reactorBtn"></span><span class="cd hidden"></span></button>
+    <button class="act vent hidden" id="bVent" data-i18n="ph.vent"></button>
+    <button class="act vent hidden" id="bNext" data-i18n="ph.ventNext"></button>
     <button class="act frz hidden" id="bFrz"><span data-i18n="ph.freeze"></span><span class="cd hidden"></span></button>
     <button class="act rep" id="bRep" data-i18n="ph.report"></button>
     <button class="act use" id="bUse" data-i18n="ph.use"></button>
   </div>
 </div>
 
-<div id="sMeeting" class="screen hidden" style="gap:10px;justify-content:flex-start;padding-top:calc(20px + env(safe-area-inset-top))">
+<div id="sMeeting" class="screen hidden scroll" style="gap:10px;justify-content:flex-start;padding-top:calc(20px + env(safe-area-inset-top))">
   <h2 style="margin:0" data-i18n="tv.meeting"></h2>
   <div id="mReason" class="muted" style="font-size:1.05em"></div>
   <div class="timer" id="mTimer"></div>
@@ -87,11 +92,19 @@
 </div>
 
 <div id="sInfo" class="screen hidden" style="gap:12px">
-  <div style="font-size:3em">📺</div>
-  <h1 id="infoTitle"></h1>
-  <div id="infoText" style="font-size:1.2em"></div>
-  <div id="infoSub" style="font-size:1.1em;max-width:90vw"></div>
-  <button class="big hidden" id="btnLobby" data-i18n="ph.again"></button>
+  <canvas id="ejectCv" class="ejectCv hidden"></canvas>
+  <div class="infoBox">
+    <div id="infoIcon" style="font-size:3em">📺</div>
+    <h1 id="infoTitle"></h1>
+    <div id="infoText" style="font-size:1.2em"></div>
+    <div id="infoSub" style="font-size:1.1em;max-width:90vw"></div>
+    <button class="big hidden" id="btnLobby" data-i18n="ph.again"></button>
+  </div>
+</div>
+
+<div id="splash" class="splash hidden">
+  <div class="splashTitle" id="splashTitle"></div>
+  <div id="splashArt"></div>
 </div>
 
 <div id="mgModal" class="modal hidden">
@@ -102,6 +115,18 @@
 <div id="mapModal" class="modal hidden">
   <button class="x" id="mapClose" data-i18n="ph.close"></button>
   <canvas class="minimap" id="miniCv"></canvas>
+</div>
+
+<div id="camModal" class="modal hidden">
+  <button class="x" id="camClose" data-i18n="ph.close"></button>
+  <div class="modalTitle" data-i18n="ph.camsTitle"></div>
+  <div class="camGrid"><canvas></canvas><canvas></canvas><canvas></canvas><canvas></canvas></div>
+</div>
+
+<div id="admModal" class="modal hidden">
+  <button class="x" id="admClose" data-i18n="ph.close"></button>
+  <div class="modalTitle" data-i18n="ph.adminTitle"></div>
+  <canvas class="minimap" id="admCv"></canvas>
 </div>
 
 <script src="vendor/peerjs.min.js"></script>
