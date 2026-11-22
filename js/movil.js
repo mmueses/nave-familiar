@@ -468,7 +468,7 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#0b1026'; ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.setTransform(sc, 0, 0, sc, cx - me.x * sc, cy - me.y * sc);
-    DRAW.ship(ctx, { labels: true, t: time, tr: t, highlight: pendingStations(), lightsOut: !!s.dark, reactor: !!s.reactor });
+    DRAW.ship(ctx, { t: time, tr: t, highlight: pendingStations(), lightsOut: !!s.dark, reactor: !!s.reactor, res: sc });
     (s.bd || []).forEach(function (b) { DRAW.frozen(ctx, b[0], b[1], hexOf(b[2]), time, b[3]); });
     var seen = {};
     var others = (s.ps || []).map(function (p) {
@@ -562,7 +562,7 @@
   }
   function drawAdmin() {
     var c = fitMap($('admCv'), 0.56);
-    DRAW.ship(c, { labels: true, t: performance.now() / 1000, tr: t, reactor: !!s.reactor });
+    DRAW.ship(c, { t: performance.now() / 1000, tr: t, reactor: !!s.reactor, res: c.getTransform().a });
     c.fillStyle = 'rgba(10,20,40,0.45)'; c.fillRect(-100, -100, MAP.w + 200, MAP.h + 200);
     var counts = s.admin || {};
     MAP.rooms.forEach(function (r) {
@@ -584,7 +584,7 @@
       var x = c.getContext('2d');
       var sc = Math.min(c.width, c.height) / 360;
       x.setTransform(sc, 0, 0, sc, c.width / 2 - cam.x * sc, c.height / 2 - cam.y * sc);
-      DRAW.ship(x, { t: time, tr: t, lightsOut: !!s.dark, reactor: !!s.reactor });
+      DRAW.ship(x, { t: time, tr: t, lightsOut: !!s.dark, reactor: !!s.reactor, res: sc });
       var feed = (s.cams && s.cams[i]) || { p: [], b: [] };
       feed.b.forEach(function (b) { DRAW.frozen(x, b[0], b[1], hexOf(b[2]), time, b[3]); });
       feed.p.forEach(function (p) { DRAW.character(x, p[0], p[1], hexOf(p[2]), { look: p[3], t: time }); });
