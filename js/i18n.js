@@ -24,6 +24,11 @@
       'ph.play': 'Jugar',
       'ph.impWas': 'El impostor era: {names}',
       'lang.label': 'Idioma',
+      'app.install': '📲 Instalar como app',
+      'app.installHelp': 'Para instalarlo como app en Android: abre el menú ⋮ de Chrome y pulsa «Añadir a pantalla de inicio» o «Instalar aplicación».',
+      'app.share': '📤 Enviar a la familia',
+      'app.shareText': '¡Juega a Nave Familiar con nosotros! Ábrelo y pulsa «Instalar como app»:',
+      'app.copied': 'Enlace copiado. Pégalo en WhatsApp:',
 
       'room.cafe': 'Comedor', 'room.engines': 'Motores', 'room.bridge': 'Puente de mando',
       'room.lab': 'Laboratorio', 'room.storage': 'Almacén',
@@ -182,6 +187,11 @@
       'ph.play': 'Play',
       'ph.impWas': 'The impostor was: {names}',
       'lang.label': 'Language',
+      'app.install': '📲 Install as an app',
+      'app.installHelp': 'To install it as an app on Android: open the Chrome ⋮ menu and tap “Add to Home screen” or “Install app”.',
+      'app.share': '📤 Send to family',
+      'app.shareText': 'Play Family Ship with us! Open it and tap “Install as an app”:',
+      'app.copied': 'Link copied. Paste it in WhatsApp:',
 
       'room.cafe': 'Cafeteria', 'room.engines': 'Engines', 'room.bridge': 'Bridge',
       'room.lab': 'Laboratory', 'room.storage': 'Storage',
