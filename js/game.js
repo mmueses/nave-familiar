@@ -170,6 +170,18 @@
     var all = this.list();
     var nImp = Math.min(this.settings.impostors, Game.maxImps(all.length));
     var imps = shuffle(all.slice()).slice(0, nImp).map(function (p) { return p.id; });
+    // Los bots llevan personajes distintos de los de las personas (y entre sí)
+    var L = looks();
+    if (L && L.LIST.ch && L.LIST.ch.length) {
+      var used = {}; all.forEach(function (p) { if (!p.bot && p.look && p.look.ch) used[p.look.ch] = 1; });
+      var pool = shuffle(L.LIST.ch.map(function (c) { return c.id; }).filter(function (id) { return !used[id]; }));
+      all.forEach(function (p) {
+        if (!p.bot) return;
+        p.level = p.level || (1 + Math.floor(Math.random() * 30));
+        p.look = L.randomFor(p.level); p.look.hat = 'none'; p.look.suit = 'none';
+        if (pool.length) p.look.ch = pool.shift();
+      });
+    }
     var taskIds = MAP.stations.filter(function (s) { return MAP.TASK_TYPES.indexOf(s.type) >= 0; }).map(function (s) { return s.id; });
 
     all.forEach(function (p) {

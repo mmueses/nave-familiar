@@ -1,8 +1,6 @@
 /* Dibujo compartido (tele y móvil): la nave, las estaciones y los personajes. Todo en coordenadas del mundo. */
 (function (root) {
   var MAP = root.NAVE_MAP;
-  var STARS = [];
-  for (var i = 0; i < 320; i++) STARS.push([Math.random() * (MAP.w + 800) - 400, Math.random() * (MAP.h + 800) - 400, Math.random() * 1.8 + 0.3]);
 
   function rr(ctx, x, y, w, h, r, keepPath) {
     if (!keepPath) ctx.beginPath();
@@ -34,10 +32,61 @@
 
   // Astronauta original, estilo dibujo: contorno grueso y colores planos. opts.look = { hat, suit, fx }
   var OUT = '#1a1a2e';
+  // ---------- Personajes con imagen (hoja img/personajes.webp) ----------
+  var SPK = 50 / 124;   // unidades del mundo por píxel de la hoja
+  var SPR = {}, sheet = null, sheetReady = false, waiting = [];
+  (root.PERSONAJES_DATA || []).forEach(function (d) { SPR[d[0]] = { x: d[1], y: d[2], w: d[3], h: d[4] }; });
+  if (typeof Image !== 'undefined' && root.PERSONAJES_DATA) {
+    sheet = new Image();
+    sheet.onload = function () { sheetReady = true; var w = waiting; waiting = []; w.forEach(function (f) { try { f(); } catch (e) {} }); };
+    sheet.src = 'img/personajes.webp';
+  }
+  function spriteOf(look) { return look && look.ch && SPR[look.ch] ? SPR[look.ch] : null; }
+  var iceCache = {};
+  function icy(id) {
+    if (iceCache[id]) return iceCache[id];
+    var s = SPR[id], c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
+    var x = c.getContext('2d'); x.drawImage(sheet, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
+    x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(140,205,255,0.55)'; x.fillRect(0, 0, s.w, s.h);
+    iceCache[id] = c; return c;
+  }
+  // Dibuja un personaje con imagen. Los pies quedan en (x, y+17*sc). Devuelve su alto (unidades del mundo).
+  function spriteChar(ctx, x, y, hex, opts, sp) {
+    var sc = opts.scale || 1, T = opts.t || (performance.now() / 1000);
+    var w = sp.w * SPK, h = sp.h * SPK;
+    ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+    if (!opts.ghost && !opts.ice) {
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 16.5, Math.min(22, w * 0.42), 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.beginPath(); ctx.ellipse(0, 16.5, Math.min(22, w * 0.42) + 2, 6.5, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = hex; ctx.stroke();
+    }
+    if (opts.ghost) ctx.globalAlpha = 0.45;
+    var bob = 0, sy = 1;
+    if (opts.walk) { bob = -Math.abs(Math.sin(opts.walk * Math.PI * 2)) * 2.5; sy = 1 - Math.abs(Math.cos(opts.walk * Math.PI * 2)) * 0.03; }
+    else if (!opts.ice) sy = 1 + Math.sin(T * 2.2) * 0.015;
+    ctx.translate(0, 17 + bob); ctx.scale(opts.dir || 1, sy);
+    if (sheetReady) {
+      if (opts.ice) ctx.drawImage(icy(look_id(opts)), -w / 2, -h, w, h);
+      else ctx.drawImage(sheet, sp.x, sp.y, sp.w, sp.h, -w / 2, -h, w, h);
+    } else {
+      ctx.fillStyle = hex; ctx.beginPath(); ctx.ellipse(0, -h / 2, w / 3, h / 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.stroke();
+    }
+    ctx.restore();
+    return h;
+  }
+  function look_id(opts) { return opts.look.ch; }
   function ol(ctx, fill, lw) { ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = lw || 2; ctx.strokeStyle = OUT; ctx.stroke(); }
   function character(ctx, x, y, hex, opts) {
     opts = opts || {};
     var sc = opts.scale || 1, L = window.LOOKS, look = opts.look || null, T = opts.t || (performance.now() / 1000);
+    var sp = spriteOf(look);
+    if (sp) {
+      var hh = spriteChar(ctx, x, y, hex, opts, sp);
+      if (L && !opts.ghost && !opts.ice) L.fx(ctx, x, y, look, T, sc);
+      if (opts.name) nameTag(ctx, x, y - (hh - 17 + 4) * sc, opts, sc);
+      return;
+    }
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(sc * (opts.dir || 1), sc);
@@ -120,21 +169,37 @@
     if (look && L) { L.head(ctx, look); L.hat(ctx, look, hex); }
     ctx.restore();
     if (look && L && !opts.ghost) L.fx(ctx, x, y, look, T, sc);
-    if (opts.name) {
-      var top = (look && L ? L.topOf(look) : 38) + 3;
-      ctx.save();
-      ctx.font = 'bold ' + Math.round(11 * sc) + 'px system-ui, sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      ctx.lineWidth = 3.2; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-      if (opts.ghost) ctx.globalAlpha = 0.6;
-      ctx.strokeText(opts.name, x, y - top * sc);
-      ctx.fillStyle = opts.nameColor || '#fff';
-      ctx.fillText(opts.name, x, y - top * sc);
-      ctx.restore();
-    }
+    if (opts.name) nameTag(ctx, x, y - ((look && L ? L.topOf(look) : 38) + 3) * sc, opts, sc);
+  }
+  function nameTag(ctx, x, ty, opts, sc) {
+    ctx.save();
+    ctx.font = 'bold ' + Math.round(11 * sc) + 'px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.lineWidth = 3.2; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    if (opts.ghost) ctx.globalAlpha = 0.6;
+    ctx.strokeText(opts.name, x, ty);
+    ctx.fillStyle = opts.nameColor || '#fff';
+    ctx.fillText(opts.name, x, ty);
+    ctx.restore();
   }
 
   function frozen(ctx, x, y, hex, t, look) {
+    var sp = spriteOf(look);
+    if (sp) {
+      var w = sp.w * SPK, h = sp.h * SPK;
+      character(ctx, x, y, hex, { look: look, t: 0, ice: true });
+      ctx.save(); ctx.translate(x, y);
+      ctx.fillStyle = 'rgba(170,225,255,0.42)'; ctx.strokeStyle = OUT; ctx.lineWidth = 2.2;
+      rr(ctx, -w / 2 - 6, 17 - h - 8, w + 12, h + 12, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = hex; ctx.lineWidth = 2; rr(ctx, -w / 2 - 3, 17 - h - 5, w + 6, h + 6, 5); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-w / 2, 17 - h + 6); ctx.lineTo(-w / 2 + 9, 17 - h - 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-w / 2, 17 - h + 18); ctx.lineTo(-w / 2 + 5, 17 - h + 13); ctx.stroke();
+      var sp2 = 0.5 + 0.5 * Math.sin((t || 0) * 4);
+      circle(ctx, w / 2 - 4, 17 - h + 4, 2, 'rgba(255,255,255,' + sp2 + ')');
+      ctx.restore();
+      return;
+    }
     character(ctx, x, y, hex, { look: look, t: 0 });
     ctx.save();
     ctx.translate(x, y);
@@ -155,16 +220,29 @@
     var dpr = window.devicePixelRatio || 1;
     c.width = size * dpr; c.height = size * dpr;
     c.style.width = size + 'px'; c.style.height = size + 'px';
+    paintAvatar(c, hex, size, opts);
+    if (spriteOf(opts && opts.look) && !sheetReady) waiting.push(function () { paintAvatar(c, hex, size, opts); });
+    return c;
+  }
+  function paintAvatar(c, hex, size, opts) {
+    var dpr = window.devicePixelRatio || 1;
     var ctx = c.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, c.width, c.height);
     ctx.scale(dpr * size / 64, dpr * size / 64);
     var look = opts && opts.look;
+    var sp = spriteOf(look);
+    if (sp) {
+      var w = sp.w * SPK, h = sp.h * SPK, k = Math.min(1.2, 56 / (h + 8), 58 / (w + 4));
+      if (opts && opts.frozen) { ctx.translate(32, 60 - 17 * k); ctx.scale(k, k); frozen(ctx, 0, 0, hex, 0, look); }
+      else character(ctx, 32, 60 - 17 * k, hex, { ghost: opts && opts.ghost, scale: k, look: look, t: 0.3 });
+      return;
+    }
     if (opts && opts.frozen) { ctx.translate(32, 50); ctx.scale(0.82, 0.82); frozen(ctx, 0, 0, hex, 0, look); }
     else {
       var tall = look && window.LOOKS ? window.LOOKS.topOf(look) : 37;
       var s = Math.min(1.1, 52 / (tall + 18));
       character(ctx, 32, 60 - 17 * s, hex, { ghost: opts && opts.ghost, scale: s, look: look, t: 0.3 });
     }
-    return c;
   }
 
   // Polígono de lo que se ve desde (x,y) con radio r: rayos que se paran en las paredes

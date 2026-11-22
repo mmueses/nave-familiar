@@ -32,7 +32,7 @@
 
       'room.cafe': 'Comedor', 'room.engines': 'Motores', 'room.bridge': 'Puente de mando',
       'room.lab': 'Laboratorio', 'room.storage': 'Almacén',
-      'look.open': '👕 Personalizar', 'look.title': 'Personaliza tu astronauta', 'look.hat': 'Sombreros', 'look.suit': 'Disfraces', 'look.fx': 'Efectos', 'look.locked': '🔒 Nivel {n}',
+      'look.open': '👕 Elegir personaje', 'look.title': 'Elige tu personaje', 'look.ch': 'Personajes', 'look.hat': 'Sombreros', 'look.suit': 'Disfraces', 'look.fx': 'Efectos', 'look.locked': '🔒 Nivel {n}',
       'item.none': 'Nada', 'item.cap': 'Gorra', 'item.bow': 'Lazo', 'item.flower': 'Flor', 'item.party': 'Gorro de fiesta', 'item.headphones': 'Auriculares',
       'item.cowboy': 'Vaquero', 'item.chef': 'Chef', 'item.crown': 'Corona', 'item.wizard': 'Mago', 'item.viking': 'Vikingo', 'item.halo': 'Aureola', 'item.pirate': 'Pirata',
       'item.cat': 'Gato', 'item.bunny': 'Conejo', 'item.bear': 'Oso', 'item.bee': 'Abeja', 'item.frog': 'Rana', 'item.fox': 'Zorro', 'item.dragon': 'Dragón',
@@ -210,7 +210,7 @@
 
       'room.cafe': 'Cafeteria', 'room.engines': 'Engines', 'room.bridge': 'Bridge',
       'room.lab': 'Laboratory', 'room.storage': 'Storage',
-      'look.open': '👕 Customize', 'look.title': 'Customize your astronaut', 'look.hat': 'Hats', 'look.suit': 'Costumes', 'look.fx': 'Effects', 'look.locked': '🔒 Level {n}',
+      'look.open': '👕 Choose character', 'look.title': 'Choose your character', 'look.ch': 'Characters', 'look.hat': 'Hats', 'look.suit': 'Costumes', 'look.fx': 'Effects', 'look.locked': '🔒 Level {n}',
       'item.none': 'None', 'item.cap': 'Cap', 'item.bow': 'Bow', 'item.flower': 'Flower', 'item.party': 'Party hat', 'item.headphones': 'Headphones',
       'item.cowboy': 'Cowboy', 'item.chef': 'Chef', 'item.crown': 'Crown', 'item.wizard': 'Wizard', 'item.viking': 'Viking', 'item.halo': 'Halo', 'item.pirate': 'Pirate',
       'item.cat': 'Cat', 'item.bunny': 'Bunny', 'item.bear': 'Bear', 'item.bee': 'Bee', 'item.frog': 'Frog', 'item.fox': 'Fox', 'item.dragon': 'Dragon',

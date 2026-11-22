@@ -17,14 +17,19 @@
       { id: 'snow', lv: 7 }, { id: 'flames', lv: 9 }, { id: 'stars', lv: 11 }, { id: 'rainbow', lv: 15 }
     ]
   };
+  // Personajes (imágenes): todos disponibles desde el principio
+  var PD = root.PERSONAJES_DATA || (typeof require !== 'undefined' ? (function () { try { return require('./personajes-data.js'); } catch (e) { return []; } })() : []);
+  LIST.ch = PD.map(function (d) { return { id: d[0], lv: 1, es: d[5], en: d[6] }; });
   function find(slot, id) { var l = LIST[slot] || []; for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i]; return null; }
   function valid(look) {
     var out = { hat: 'none', suit: 'none', fx: 'none' };
     if (look && typeof look === 'object') ['hat', 'suit', 'fx'].forEach(function (k) { if (find(k, look[k])) out[k] = look[k]; });
+    if (look && typeof look === 'object' && find('ch', look.ch)) out.ch = look.ch;
     return out;
   }
   function randomFor(level) {
     var o = {};
+    if (LIST.ch.length) o.ch = LIST.ch[Math.floor(Math.random() * LIST.ch.length)].id;
     ['hat', 'suit', 'fx'].forEach(function (k) {
       var ok = LIST[k].filter(function (it) { return it.lv <= level; });
       o[k] = Math.random() < (k === 'fx' ? 0.25 : 0.55) ? ok[Math.floor(Math.random() * ok.length)].id : 'none';
@@ -126,6 +131,7 @@
   // ¿El sombrero/disfraz es alto? (para subir el nombre)
   function topOf(look) {
     if (!look) return 37;
+    if (look.ch && find('ch', look.ch)) return 46;
     var t = { party: 52, wizard: 58, chef: 51, unicorn: 47, bunny: 49, crown: 43, viking: 42, cowboy: 43, halo: 42, dragon: 42, bee: 43 };
     return Math.max(t[look.hat] || 37, t[look.suit] || 37);
   }
@@ -150,6 +156,7 @@
     ctx.restore();
   }
 
-  root.LOOKS = { LIST: LIST, find: find, valid: valid, randomFor: randomFor, back: back, body: body, head: head, hat: hat, fx: fx, topOf: topOf, OUT: OUT };
+  function chName(id, lang) { var it = find('ch', id); return it ? (lang === 'en' ? it.en : it.es) : id; }
+  root.LOOKS = { chName: chName, LIST: LIST, find: find, valid: valid, randomFor: randomFor, back: back, body: body, head: head, hat: hat, fx: fx, topOf: topOf, OUT: OUT };
   if (typeof module !== 'undefined') module.exports = root.LOOKS;
 })(typeof window !== 'undefined' ? window : globalThis);

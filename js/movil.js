@@ -83,7 +83,15 @@
   function xpTotal() { return parseInt(store.get('nave.xp'), 10) || 0; }
   function myLevel() { return AJUSTES.levelInfo(xpTotal()).level; }
   function sendHello() { send({ t: 'hello', pid: pid, name: store.get('nave.name') || $('name').value, color: myColor, lvl: myLevel(), look: myLook() }); }
-  function myLook() { try { return JSON.parse(store.get('nave.look') || 'null'); } catch (e) { return null; } }
+  function myLook() {
+    var l = null;
+    try { l = JSON.parse(store.get('nave.look') || 'null'); } catch (e) {}
+    if (!l || typeof l !== 'object') l = {};
+    if (!l.ch || !LOOKS.find('ch', l.ch)) {   // todos llevan un personaje; si no hay, uno al azar
+      var all = LOOKS.LIST.ch; if (all.length) { l.ch = all[Math.floor(Math.random() * all.length)].id; store.set('nave.look', JSON.stringify(l)); }
+    }
+    return l;
+  }
   function send(o) { if (conn) conn.send(o); }
   function connect(first) {
     if (connecting) return;
@@ -228,7 +236,7 @@
   bindSeg('pMap', function (v) { send({ t: 'set', s: { map: v } }); });
   var refreshSettings = AJUSTES.build($('setPanel'), function () { return (s && s.settings) || NaveGame.defaultSettings(); }, function (ch) { send({ t: 'set', s: ch }); });
   // Armario: elegir sombrero, disfraz y efecto (se desbloquean por nivel)
-  var lookTab = 'hat';
+  var lookTab = 'ch';
   function curLook() { return LOOKS.valid(myLook()); }
   function renderWardrobe() {
     var look = curLook(), lv = myLevel();
@@ -240,7 +248,7 @@
       var b = document.createElement('button'); b.className = 'lookItem' + (look[lookTab] === it.id ? ' on' : '');
       var trial = {}; for (var k in look) trial[k] = look[k]; trial[lookTab] = it.id;
       b.appendChild(DRAW.avatarCanvas(hexOf(myColor), 64, { look: trial }));
-      var nm = document.createElement('span'); nm.textContent = t('item.' + it.id); b.appendChild(nm);
+      var nm = document.createElement('span'); nm.textContent = lookTab === 'ch' ? LOOKS.chName(it.id, I18N.lang) : t('item.' + it.id); b.appendChild(nm);
       if (it.lv > lv) { b.disabled = true; var lk = document.createElement('i'); lk.textContent = t('look.locked', { n: it.lv }); b.appendChild(lk); }
       b.onclick = function () {
         var nl = curLook(); nl[lookTab] = it.id;
