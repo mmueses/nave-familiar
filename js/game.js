@@ -7,9 +7,9 @@
     { id: 'red', hex: '#e5484d' }, { id: 'blue', hex: '#3e7bfa' }, { id: 'green', hex: '#30a46c' },
     { id: 'pink', hex: '#f76bb5' }, { id: 'orange', hex: '#f5a524' }, { id: 'yellow', hex: '#f2d63a' },
     { id: 'purple', hex: '#8e4ec6' }, { id: 'cyan', hex: '#2ec5ce' }, { id: 'white', hex: '#e8e8ee' },
-    { id: 'lime', hex: '#99d52a' }
+    { id: 'lime', hex: '#99d52a' }, { id: 'brown', hex: '#9a6a3a' }, { id: 'gray', hex: '#7d8597' }
   ];
-  var BOT_NAMES = ['Robi', 'Luna', 'Chispa', 'Nube', 'Pixel', 'Cometa', 'Tornillo', 'Estrella', 'Bolita', 'Rayo'];
+  var BOT_NAMES = ['Robi', 'Luna', 'Chispa', 'Nube', 'Pixel', 'Cometa', 'Tornillo', 'Estrella', 'Bolita', 'Rayo', 'Lupa', 'Trueno'];
 
   var CFG = {
     speed: 190, radius: 10,
@@ -18,7 +18,7 @@
     freezeCd: 25, freezeCdStart: 15, sabCd: 40, sabCdStart: 20, meetingCdStart: 12,
     reactorTime: 45,
     splashTime: 2.5, discussTime: 30, voteTime: 35, ejectTime: 8, introTime: 6,
-    tasksPerPlayer: 5, maxHumans: 8, maxTotal: 10,
+    tasksPerPlayer: 5, maxHumans: 12, maxTotal: 12, minTotal: 5,
     botTakeover: 15 // segundos desconectado antes de que un bot mueva a ese jugador
   };
 
@@ -44,6 +44,8 @@
     this.onEvent = function () {};
     this.botCount = 0;
   }
+  // Máximo de impostores según jugadores: 5-6 → 1, 7-9 → 2, 10-12 → 3
+  Game.maxImps = function (n) { return Math.max(1, Math.min(3, Math.floor((n - 1) / 3))); };
   var G = Game.prototype;
 
   // ---------- Sala de espera ----------
@@ -104,8 +106,11 @@
 
   G.setSettings = function (s) {
     if (!s || this.phase !== 'lobby') return;
-    if (s.total === 7 || s.total === 8) this.settings.total = s.total;
-    if (s.impostors === 1 || s.impostors === 2) this.settings.impostors = s.impostors;
+    var n = parseInt(s.total, 10);
+    if (n >= CFG.minTotal && n <= CFG.maxTotal) this.settings.total = n;
+    var k = parseInt(s.impostors, 10);
+    if (k >= 1 && k <= 3) this.settings.impostors = k;
+    this.settings.impostors = Math.min(this.settings.impostors, Game.maxImps(Math.max(this.settings.total, this.humans().length)));
   };
 
   // ---------- Empezar ----------
@@ -124,7 +129,7 @@
       this.order.push(id);
     }
     var all = this.list();
-    var nImp = Math.min(this.settings.impostors, Math.max(1, Math.floor((all.length - 1) / 3)));
+    var nImp = Math.min(this.settings.impostors, Game.maxImps(all.length));
     var imps = shuffle(all.slice()).slice(0, nImp).map(function (p) { return p.id; });
     var taskIds = MAP.stations.filter(function (s) { return MAP.TASK_TYPES.indexOf(s.type) >= 0; }).map(function (s) { return s.id; });
 

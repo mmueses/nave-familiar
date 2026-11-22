@@ -26,6 +26,14 @@
 <div id="sWait" class="screen hidden"><h2 id="waitText"></h2></div>
 
 <div id="sLobby" class="screen hidden scroll" style="gap:14px">
+  <div class="roomBox hidden" id="roomBox">
+    <div class="muted" data-i18n="ph.roomCode"></div>
+    <div class="roomCode" id="roomCode">····</div>
+    <div class="qr" id="roomQr"></div>
+    <div id="roomStatus" class="roomStatus"></div>
+    <div class="muted small" data-i18n="ph.roomHow"></div>
+    <div class="muted small" data-i18n="ph.hostKeep"></div>
+  </div>
   <div class="muted" data-i18n="ph.youAre"></div>
   <div id="meAvatar"></div>
   <h2 id="meName" style="margin:0"></h2>
@@ -34,8 +42,8 @@
   <div class="plist" id="lobbyList"></div>
   <div id="hostBox" class="hidden" style="display:flex;flex-direction:column;gap:10px;align-items:center">
     <div class="muted" id="hostHint" data-i18n="ph.hostHint"></div>
-    <div class="row"><span data-i18n="tv.total"></span><div class="seg" id="pTotal"><button data-v="7">7</button><button data-v="8">8</button></div></div>
-    <div class="row"><span data-i18n="tv.impostors"></span><div class="seg" id="pImp"><button data-v="1">1</button><button data-v="2">2</button></div></div>
+    <div class="row"><span data-i18n="tv.total"></span><div class="stepper"><button class="sec" id="pMinus">−</button><b id="pTotalVal">8</b><button class="sec" id="pPlus">+</button></div></div>
+    <div class="row"><span data-i18n="tv.impostors"></span><div class="seg" id="pImp"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button></div></div>
     <div class="row"><span data-i18n="lang.label"></span><div class="seg" id="pLang"><button data-v="es">ES</button><button data-v="en">EN</button></div></div>
     <button class="big" id="btnStart" data-i18n="ph.startHere"></button>
   </div>
@@ -135,6 +143,8 @@
 <script src="js/game.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/net.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="js/servidor.js"></script>
 <script src="js/minijuegos.js"></script>
 <script src="js/movil.js"></script>
 </body>

@@ -20,7 +20,7 @@
   var myColor = parseInt(store.get('nave.color'), 10);
   if (isNaN(myColor)) myColor = Math.floor(Math.random() * COLORS.length);
 
-  var SOLO = /[?&]solo=1/.test(location.search);
+  var SOLO = /[?&](solo|crear)=1/.test(location.search);   // este móvil crea la partida (y puede invitar a otros)
   var conn = null, code = null, lastData = 0, retryTimer = null, joinedOnce = false, stopRetry = false, connecting = false;
   var s = null;           // última foto recibida
   var screen = null;
@@ -87,6 +87,7 @@
     connecting = true;
     wait(first ? t('ph.connecting') : t('ph.lost'));
     NET.join(code, {
+      onStatus: function (st) { wait(st === 'server' ? t('ph.stServer') : t('ph.stRoom', { code: code })); },
       onOpen: function (w) {
         connecting = false;
         conn = w; lastData = Date.now();
@@ -98,7 +99,7 @@
         connecting = false;
         if (first && !joinedOnce) {
           show('sJoin');
-          $('joinErr').textContent = e === 'notfound' ? t('ph.notFound') : t('ph.lost');
+          $('joinErr').textContent = e === 'notfound' ? t('ph.notFound') : e === 'blocked' ? t('ph.errBlocked') : t('ph.errServer');
         } else scheduleRetry();
       }
     });
@@ -128,44 +129,36 @@
     if (m.t === 's') onSnap(m);
   }
 
-  // ---------- Modo solo: la partida corre en este mismo dispositivo ----------
-  var soloStarted = false;
+  // ---------- Crear partida en este móvil: lleva el juego y abre una sala para invitar a otros ----------
+  var soloStarted = false, server = null;
   function startSolo() {
     if (soloStarted) return;   // evita dos partidas a la vez si se toca dos veces
     soloStarted = true;
     var g = new NaveGame();
-    g.join(pid, store.get('nave.name'), myColor);
-    conn = { send: function (o) { soloMsg(g, o); }, close: function () {} };
+    server = new NaveServer(g, {
+      onChange: function () { uiKey.lobby = null; },
+      onStatus: function () { uiKey.room = null; if (s && s.ph === 'lobby') renderRoom(); },
+      onLang: function (l) { I18N.set(l); I18N.apply(); uiKey = {}; }
+    });
+    var toServer = server.local(function (snap) { onData(snap); });
+    conn = { send: toServer, close: function () {} };
     joinedOnce = true;
-    var last = performance.now(), lastSnap = 0;
-    setInterval(function () {
-      var now = performance.now();
-      var dt = Math.min(0.25, (now - last) / 1000); last = now;
-      if (g.phase !== 'lobby') g.tick(dt);
-      if (now - lastSnap >= 80) { lastSnap = now; onData(JSON.parse(JSON.stringify(g.snapshot(pid)))); }
-    }, 40);
-    window.__game = g;
+    sendHello();
+    server.open(NET.makeCode());
+    window.__game = g; window.__server = server;
   }
-  function soloMsg(g, m) {
-    switch (m.t) {
-      case 'hello': g.join(pid, m.name, m.color); break;
-      case 'in': g.setInput(pid, m.x, m.y); break;
-      case 'act': doAct(g, pid, m.a); break;
-      case 'done': g.taskDone(pid, m.sid); break;
-      case 'cancel': g.taskCancel(pid); break;
-      case 'vote': g.vote(pid, m.v); break;
-      case 'set': g.setSettings(m.s); if (m.lang) { I18N.set(m.lang); I18N.apply(); uiKey = {}; } break;
-      case 'start': g.start(); break;
-      case 'lobby': if (g.phase === 'end') g.backToLobby(); break;
-    }
+  function renderRoom() {
+    if (!server) return;
+    $('roomBox').classList.remove('hidden');
+    var key = server.code + server.status + I18N.lang;
+    if (!changed('room', key)) return;
+    $('roomCode').textContent = server.code || '····';
+    var st = server.status;
+    $('roomStatus').textContent = st === 'ready' ? t('ph.roomReady') : st === 'error' ? t('ph.roomError') : st === 'lost' ? t('ph.roomLost') : t('ph.roomOpening');
+    $('roomStatus').className = 'roomStatus ' + st;
+    var url = location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '') + 'movil.html?sala=' + server.code + NET.testParams();
+    try { var qr = qrcode(0, 'M'); qr.addData(url); qr.make(); $('roomQr').innerHTML = qr.createImgTag(4, 2); } catch (e) { $('roomQr').innerHTML = ''; }
   }
-  function doAct(g, id, a) {
-    if (a === 'use') g.use(id); else if (a === 'freeze') g.freeze(id);
-    else if (a === 'report') g.report(id); else if (a === 'lights') g.sabotage(id, 'lights');
-    else if (a === 'reactor') g.sabotage(id, 'reactor'); else if (a === 'vent') g.vent(id);
-    else if (a === 'ventNext') g.ventNext(id); else if (a === 'ready') g.ready(id);
-  }
-  window.__doAct = doAct;
 
   // ---------- Recibir el estado ----------
   function onSnap(n) {
@@ -185,6 +178,7 @@
   // ---------- Sala de espera ----------
   function renderLobby() {
     show('sLobby');
+    renderRoom();
     var me = s.me || { n: '', c: myColor };
     if (changed('lobby', JSON.stringify([s.players, s.host, s.settings, me, I18N.lang]))) {
       myColor = me.c;
@@ -201,7 +195,11 @@
         list.appendChild(d);
       });
       $('hostBox').classList.toggle('hidden', s.host !== pid);
-      seg('pTotal', s.settings.total); seg('pImp', s.settings.impostors); seg('pLang', s.lang);
+      $('pTotalVal').textContent = s.settings.total;
+      seg('pImp', s.settings.impostors); seg('pLang', s.lang);
+      var maxI = NaveGame.maxImps(Math.max(s.settings.total, s.players.length));
+      var ib = $('pImp').querySelectorAll('button');
+      for (var k = 0; k < ib.length; k++) ib[k].disabled = +ib[k].getAttribute('data-v') > maxI;
     }
   }
   function seg(id, v) {
@@ -212,7 +210,8 @@
     var bs = $(id).querySelectorAll('button');
     for (var i = 0; i < bs.length; i++) (function (b) { b.onclick = function () { fn(b.getAttribute('data-v')); }; })(bs[i]);
   }
-  bindSeg('pTotal', function (v) { send({ t: 'set', s: { total: +v } }); });
+  $('pMinus').onclick = function () { if (s && s.settings) send({ t: 'set', s: { total: s.settings.total - 1 } }); };
+  $('pPlus').onclick = function () { if (s && s.settings) send({ t: 'set', s: { total: s.settings.total + 1 } }); };
   bindSeg('pImp', function (v) { send({ t: 'set', s: { impostors: +v } }); });
   bindSeg('pLang', function (v) { send({ t: 'set', s: {}, lang: v }); });
   $('btnStart').onclick = function () { send({ t: 'start' }); };

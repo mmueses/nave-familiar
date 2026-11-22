@@ -3,9 +3,6 @@
   var $ = function (id) { return document.getElementById(id); };
   var game = new NaveGame();
   var COLORS = NAVE_COLORS;
-  var conns = [];        // { w, pid, last }
-  var code = null;
-  var server = null;
   var lastScreen = null;
 
   // ---------- Pantallas ----------
@@ -54,86 +51,30 @@
   document.addEventListener('click', function () { audioOn(); keepAwake(); });
   document.addEventListener('keydown', function () { audioOn(); keepAwake(); });
 
-  // ---------- Red ----------
+  // ---------- Red (servidor común en js/servidor.js) ----------
+  var server = new NaveServer(game, {
+    onChange: function () { if (game.phase === 'lobby') renderLobby(); },
+    onStatus: function (st) {
+      $('lost').classList.toggle('hidden', st === 'ready' || st === 'opening');
+      if (st === 'ready' && game.phase === 'lobby') renderLobby();
+    },
+    onLang: function (l) { setLang(l); },
+    onStart: function () { audioOn(); lastScreen = null; }
+  });
   function phoneUrl() {
     var base = location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
-    return base + 'movil.html?sala=' + code + (NET.local ? '&local=1' : '');
+    return base + 'movil.html?sala=' + server.code + NET.testParams();
   }
   function startServer(c) {
-    code = c;
-    try { localStorage.setItem('nave.tvcode', code); } catch (e) {}
-    server = NET.host(code, {
-      onReady: function () { $('lost').classList.add('hidden'); if (game.phase === 'lobby') renderLobby(true); },
-      onLost: function () { $('lost').classList.remove('hidden'); },
-      onError: function (type) {
-        if (type === 'taken') { server.stop(); startServer(NET.makeCode()); }
-      },
-      onConn: function (w) {
-        var c = { w: w, pid: null, last: Date.now() };
-        conns.push(c);
-        w.onData = function (m) { c.last = Date.now(); onMsg(c, m); };
-        w.onClose = function () { drop(c); };
-      }
-    });
-  }
-  function drop(c) {
-    var i = conns.indexOf(c);
-    if (i < 0) return;
-    conns.splice(i, 1);
-    if (c.pid && !conns.some(function (o) { return o.pid === c.pid; })) game.leave(c.pid);
-    if (game.phase === 'lobby') renderLobby();
-  }
-  function onMsg(c, m) {
-    if (!m || typeof m !== 'object') return;
-    var pid = c.pid;
-    switch (m.t) {
-      case 'hello':
-        var r = game.join(String(m.pid || '').slice(0, 40), m.name, m.color);
-        if (r !== 'ok') { c.w.send({ t: 'err', e: r }); return; }
-        c.pid = String(m.pid).slice(0, 40);
-        // cerrar conexiones antiguas del mismo jugador
-        conns.slice().forEach(function (o) { if (o !== c && o.pid === c.pid) { o.pid = null; o.w.close(); } });
-        c.w.send({ t: 'hi', pid: c.pid, code: code });
-        if (game.phase === 'lobby') renderLobby();
-        break;
-      case 'ping': break;
-      case 'in': if (pid) game.setInput(pid, m.x, m.y); break;
-      case 'act':
-        if (!pid) return;
-        if (m.a === 'use') game.use(pid);
-        else if (m.a === 'freeze') game.freeze(pid);
-        else if (m.a === 'report') game.report(pid);
-        else if (m.a === 'sabotage' || m.a === 'lights') game.sabotage(pid, 'lights');
-        else if (m.a === 'reactor') game.sabotage(pid, 'reactor');
-        else if (m.a === 'vent') game.vent(pid);
-        else if (m.a === 'ventNext') game.ventNext(pid);
-        else if (m.a === 'ready') game.ready(pid);
-        break;
-      case 'done': if (pid) game.taskDone(pid, m.sid); break;
-      case 'cancel': if (pid) game.taskCancel(pid); break;
-      case 'vote': if (pid) game.vote(pid, m.v); break;
-      case 'set':
-        if (pid && pid === game.hostPid()) { game.setSettings(m.s); if (m.lang) setLang(m.lang); renderLobby(); }
-        break;
-      case 'start':
-        if (pid && pid === game.hostPid()) startGame();
-        break;
-      case 'lobby':
-        if (pid && pid === game.hostPid() && game.phase === 'end') game.backToLobby();
-        break;
-    }
-  }
-  function sendSnapshots() {
-    conns.forEach(function (c) {
-      if (!c.pid) return;
-      c.w.send(game.snapshot(c.pid));
-    });
+    try { localStorage.setItem('nave.tvcode', c); } catch (e) {}
+    server.open(c);
   }
 
   // ---------- Sala de espera ----------
   var qrDone = null;
   function renderLobby(force) {
-    $('code').textContent = code || '----';
+    $('code').textContent = server.code || '----';
+    try { localStorage.setItem('nave.tvcode', server.code); } catch (e) {}
     var url = phoneUrl();
     var shortUrl = url.replace(/^https?:\/\//, '').split('?')[0];
     $('url').textContent = shortUrl;
@@ -160,8 +101,11 @@
     });
     var bots = Math.max(0, game.settings.total - humans.length);
     $('botsFill').textContent = t('tv.botsFill', { n: bots });
-    segOn('setTotal', game.settings.total);
+    $('totalVal').textContent = game.settings.total;
     segOn('setImp', game.settings.impostors);
+    var maxI = NaveGame.maxImps(Math.max(game.settings.total, humans.length));
+    var ib = $('setImp').querySelectorAll('button');
+    for (var k = 0; k < ib.length; k++) ib[k].disabled = +ib[k].getAttribute('data-v') > maxI;
     segOn('setLang', I18N.lang);
     $('btnStart').disabled = !humans.length;
     if (game.phase === 'lobby') show('sLobby');
@@ -174,7 +118,8 @@
     var bs = $(id).querySelectorAll('button');
     for (var i = 0; i < bs.length; i++) (function (b) { b.onclick = function () { fn(b.getAttribute('data-v')); renderLobby(); }; })(bs[i]);
   }
-  bindSeg('setTotal', function (v) { game.setSettings({ total: +v }); });
+  $('totalMinus').onclick = function () { game.setSettings({ total: game.settings.total - 1 }); renderLobby(); };
+  $('totalPlus').onclick = function () { game.setSettings({ total: game.settings.total + 1 }); renderLobby(); };
   bindSeg('setImp', function (v) { game.setSettings({ impostors: +v }); });
   bindSeg('setLang', function (v) { setLang(v); });
   function setLang(l) { I18N.set(l); I18N.apply(); lastScreen = null; }
@@ -325,19 +270,6 @@
     setTimeout(function () { try { $('btnAgain').focus(); } catch (e) {} }, 300);
   }
 
-  // ---------- Bucle principal ----------
-  var lastT = performance.now(), lastSend = 0, lastLobbyPaint = 0;
-  setInterval(function () {
-    var now = performance.now();
-    var dt = Math.min(0.25, (now - lastT) / 1000);
-    lastT = now;
-    if (game.phase !== 'lobby') game.tick(dt);
-    if (now - lastSend >= 100) { lastSend = now; sendSnapshots(); }
-    // conexiones que han dejado de responder
-    var nowMs = Date.now();
-    conns.slice().forEach(function (c) { if (nowMs - c.last > 9000) { c.w.close(); drop(c); } });
-  }, 50);
-
   function frame(ms) {
     var time = ms / 1000;
     var ph = game.phase;
@@ -364,5 +296,5 @@
 
   // para pruebas automáticas
   window.__game = game;
-  window.__conns = conns;
+  window.__server = server;
 })();
