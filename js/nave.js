@@ -5,6 +5,38 @@
   var OUT = '#1a1a2e';
   var PAD = 420;
 
+  // ---------- imágenes hechas con IA (por piezas; la forma del mapa sigue en código) ----------
+  // Mientras no cargan se usa el dibujo en código. Al cargar se borra la imagen guardada del mapa para redibujarlo.
+  var TEX = {};
+  function tex(id, src, tileW) {
+    var im = new Image(); TEX[id] = { img: im, ok: false, w: tileW };
+    im.onload = function () { TEX[id].ok = true; for (var k in caches) delete caches[k]; };
+    im.src = src;
+  }
+  tex('cafe', 'img/mapas/nave-comedor-suelo.webp?v=1', 120);   // suelo del Comedor: 4 paneles de 30 de ancho por cada repetición
+  // Muebles con imagen: prop(id) carga; drawProp dibuja centrado en x con la base en y y el ancho w
+  function prop(id, file) { tex(id, 'img/mapas/' + file + '?v=1', 0); }
+  ['mesa', 'maquina', 'boton', 'papelera', 'planta', 'monitor'].forEach(function (n) { prop('cafe-' + n, 'nave-comedor-' + n + '.webp'); });
+  function hasProps(list) { for (var i = 0; i < list.length; i++) if (!TEX[list[i]] || !TEX[list[i]].ok) return false; return true; }
+  function drawProp(c, id, x, y, w, shadowOn) {
+    var T = TEX[id]; if (!T || !T.ok) return false;
+    var h = w * T.img.height / T.img.width;
+    if (shadowOn !== false) { c.fillStyle = 'rgba(0,0,0,0.25)'; c.beginPath(); c.ellipse(x, y - 2, w * 0.42, Math.max(4, w * 0.12), 0, 0, Math.PI * 2); c.fill(); }
+    c.drawImage(T.img, x - w / 2, y - h, w, h);
+    return true;
+  }
+  var CAFE_PROPS = ['cafe-mesa', 'cafe-maquina', 'cafe-papelera', 'cafe-planta'];
+  function texFloor(c, r) {
+    var T = TEX[r.id];
+    if (!T || !T.ok || !c.createPattern) return false;
+    var pat = c.createPattern(T.img, 'repeat');
+    if (!pat) return false;
+    var sc = T.w / T.img.width;
+    if (pat.setTransform && root.DOMMatrix) pat.setTransform(new DOMMatrix().translateSelf(r.x, r.y).scaleSelf(sc, sc));
+    c.fillStyle = pat; c.fillRect(r.x, r.y, r.w, r.h);
+    return true;
+  }
+
   // ---------- utilidades ----------
   function rr(c, x, y, w, h, r, keep) {
     if (!keep) c.beginPath();
@@ -188,7 +220,9 @@
     c.save(); c.beginPath(); c.rect(r.x, r.y, r.w, r.h); c.clip();
     c.fillStyle = T.a; c.fillRect(r.x, r.y, r.w, r.h);
     var i, j, x, y;
-    if (r.id === 'cafe') {
+    if (texFloor(c, r)) {
+      // suelo con imagen: nada más que dibujar
+    } else if (r.id === 'cafe') {
       for (i = 0; i < r.w / 30; i++) for (j = 0; j < r.h / 30; j++) if ((i + j) % 2) { c.fillStyle = T.b; c.fillRect(r.x + i * 30, r.y + j * 30, 30, 30); }
       c.strokeStyle = 'rgba(80,60,30,0.25)'; c.lineWidth = 1;
       for (i = r.x; i < r.x + r.w; i += 30) { c.beginPath(); c.moveTo(i, r.y); c.lineTo(i, r.y + r.h); c.stroke(); }
@@ -307,13 +341,21 @@
     var r, i;
     // Comedor: mesas, barra con cafetera y máquina de bebidas, plantas
     r = R('cafe');
-    table(c, r.x + 75, r.y + 175); table(c, r.x + 225, r.y + 175);
     box(c, r.x + 70, r.y + 6, 120, 22, '#8a5a3a', 4);
     box(c, r.x + 78, r.y + 2, 18, 18, '#3a3f55', 3, { lw: 1.4 }); box(c, r.x + 104, r.y + 8, 10, 8, '#ffffff', 2, { lw: 1 }); box(c, r.x + 120, r.y + 8, 10, 8, '#ffffff', 2, { lw: 1 });
-    box(c, r.x + 225, r.y + 8, 34, 46, '#2a3a6a', 4);
-    box(c, r.x + 229, r.y + 12, 26, 24, '#5bc0ff', 2, { lw: 1.2 });
-    plant(c, r.x + 16, r.y + 20, true); plant(c, r.x + 285, r.y + 40, false);
-    box(c, r.x + 10, r.y + 205, 22, 26, '#5a6488', 4); box(c, r.x + 8, r.y + 203, 26, 6, '#7a84a8', 2, { lw: 1.2 });
+    if (hasProps(CAFE_PROPS)) {
+      // muebles dibujados con IA (Gemini)
+      drawProp(c, 'cafe-mesa', r.x + 75, r.y + 205, 88); drawProp(c, 'cafe-mesa', r.x + 225, r.y + 205, 88);
+      drawProp(c, 'cafe-maquina', r.x + 242, r.y + 62, 42);
+      drawProp(c, 'cafe-planta', r.x + 18, r.y + 44, 34); drawProp(c, 'cafe-planta', r.x + 285, r.y + 60, 28);
+      drawProp(c, 'cafe-papelera', r.x + 21, r.y + 234, 24);
+    } else {
+      table(c, r.x + 75, r.y + 175); table(c, r.x + 225, r.y + 175);
+      box(c, r.x + 225, r.y + 8, 34, 46, '#2a3a6a', 4);
+      box(c, r.x + 229, r.y + 12, 26, 24, '#5bc0ff', 2, { lw: 1.2 });
+      plant(c, r.x + 16, r.y + 20, true); plant(c, r.x + 285, r.y + 40, false);
+      box(c, r.x + 10, r.y + 205, 22, 26, '#5a6488', 4); box(c, r.x + 8, r.y + 203, 26, 6, '#7a84a8', 2, { lw: 1.2 });
+    }
     // Enfermería: camillas, armario de medicinas, gotero
     r = R('medbay');
     [r.y + 46, r.y + 90].forEach(function (y) {
@@ -401,7 +443,7 @@
     // Comedor: vapor de la cafetera y luces de la máquina
     r = R('cafe');
     for (i = 0; i < 3; i++) { var ph = (t * 0.6 + i / 3) % 1; c.fillStyle = 'rgba(255,255,255,' + (0.5 * (1 - ph)) + ')'; c.beginPath(); c.arc(r.x + 87 + Math.sin(t * 2 + i) * 3, r.y + 2 - ph * 22, 3 + ph * 4, 0, Math.PI * 2); c.fill(); }
-    for (i = 0; i < 3; i++) circ(c, r.x + 236 + i * 6, r.y + 44, 2, Math.floor(t * 2 + i) % 3 ? ['#ff6b6b', '#ffe66b', '#57e389'][i] : '#333');
+    if (!hasProps(CAFE_PROPS)) for (i = 0; i < 3; i++) circ(c, r.x + 236 + i * 6, r.y + 44, 2, Math.floor(t * 2 + i) % 3 ? ['#ff6b6b', '#ffe66b', '#57e389'][i] : '#333');
     // Enfermería: monitor de corazón
     r = R('medbay');
     box(c, r.x + 95, r.y + 4, 50, 28, '#10241f', 4, { lw: 1.6 });
@@ -610,7 +652,9 @@
       c.beginPath(); c.arc(0, 0, 24 + p * 4, 0, Math.PI * 2); c.stroke();
     }
     var i;
-    if (s.type === 'emergency') {
+    if (s.type === 'emergency' && TEX['cafe-boton'] && TEX['cafe-boton'].ok) {
+      drawProp(c, 'cafe-boton', 0, 20, 40);
+    } else if (s.type === 'emergency') {
       box(c, -22, -22, 44, 44, '#5a6488', 8);
       circ(c, 0, 0, 16, '#6b6f80', 1.6); circ(c, 0, -2, 12, '#e5484d', 1.8); circ(c, -4, -6, 3.5, 'rgba(255,255,255,0.55)');
     } else if (s.type === 'lights') {
