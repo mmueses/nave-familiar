@@ -205,57 +205,10 @@
     ]
   };
 
-  // ---------- Tercer mapa: Ciudadela de los Eones (fondo = imagen de la familia, img/ciudadela.webp) ----------
-  // Coordenadas tomadas sobre la imagen (1376 x 768) y multiplicadas por K al cargar.
-  var K = 1.6;
-  function R4(o) { return { x: Math.round(o[0] * K), y: Math.round(o[1] * K), w: Math.round((o[2] - o[0]) * K), h: Math.round((o[3] - o[1]) * K) }; }
-  function P2(a) { return [Math.round(a[0] * K), Math.round(a[1] * K)]; }
-  var CIT_ROOMS = [
-    ['platform', 'room.platform', [590, 320, 810, 415]], ['temple', 'room.temple', [630, 165, 780, 225]], ['dome', 'room.coreDome', [420, 262, 600, 338]],
-    ['topdock', 'room.topDock', [250, 250, 400, 300]], ['observatory', 'room.observatory', [70, 300, 260, 430]], ['tower', 'room.watchTower', [230, 410, 400, 560]],
-    ['dock', 'room.dock', [120, 540, 330, 640]], ['voidlib', 'room.voidLib', [400, 470, 590, 630]], ['garden', 'room.garden', [605, 500, 800, 680]],
-    ['crystal', 'room.crystalLib', [815, 220, 975, 330]], ['forge', 'room.forge', [985, 170, 1160, 330]], ['treasury', 'room.treasury', [1150, 310, 1320, 445]],
-    ['sages', 'room.sages', [1020, 400, 1180, 540]], ['alchemy', 'room.alchemy', [830, 420, 1020, 560]]
-  ];
-  var CIT_CORR = [[250, 338, 590, 415], [680, 225, 730, 320], [680, 415, 730, 500], [810, 330, 1150, 380], [880, 380, 940, 420], [330, 300, 380, 338], [585, 560, 610, 600]];
-  var CIT_ST = [
-    ['em', 'platform', 700, 398, 'emergency', 'task.emergency'], ['tp', 'temple', 705, 195, 'simon', 'task.altar'], ['dc', 'dome', 455, 300, 'calibrate', 'task.starAlign'],
-    ['td', 'topdock', 300, 275, 'fill', 'task.shipFuel'], ['ob', 'observatory', 120, 410, 'maze', 'task.constellation'], ['cam', 'tower', 290, 548, 'cameras', 'task.cameras'],
-    ['dk', 'dock', 150, 626, 'download', 'task.download'], ['vl', 'voidlib', 440, 600, 'memory', 'task.runes'], ['lt', 'voidlib', 560, 495, 'lights', 'task.lights'],
-    ['gp', 'garden', 630, 560, 'pipes', 'task.irrigation'], ['gc', 'garden', 765, 530, 'clean', 'task.cleanWindow'], ['ap', 'alchemy', 860, 470, 'sort', 'task.potions'],
-    ['adm', 'alchemy', 990, 445, 'admin', 'task.adminMap'], ['sf', 'sages', 1120, 470, 'safe', 'task.safe'], ['sn', 'sages', 1050, 425, 'numbers', 'task.formula'],
-    ['tc', 'treasury', 1285, 420, 'card', 'task.card'], ['ti', 'treasury', 1185, 335, 'download', 'task.inventory'], ['rx', 'forge', 1020, 200, 'reactor', 'task.reactorFix'],
-    ['ff', 'forge', 1125, 300, 'fill', 'task.forge'], ['cw', 'crystal', 845, 250, 'wires', 'task.crystalWires'], ['ca', 'crystal', 950, 305, 'asteroids', 'task.asteroids']
-  ];
-  var DEF_CIT = {
-    id: 'ciudadela', name: 'map.ciudadela', w: Math.round(1376 * K), h: Math.round(768 * K), wallFace: 0, image: 'img/ciudadela.webp',
-    rooms: CIT_ROOMS.map(function (r) { var o = R4(r[2]); o.id = r[0]; o.name = r[1]; return o; }),
-    corridors: CIT_CORR.map(R4),
-    stations: CIT_ST.map(function (q) { var pp = P2([q[2], q[3]]); return { id: q[0], room: q[1], x: pp[0], y: pp[1], type: q[4], name: q[5] }; }),
-    vents: [
-      ['vOb', 'A', 90, 410], ['vDk', 'A', 300, 625], ['vTd', 'A', 385, 262], ['vDm', 'B', 588, 280], ['vCr', 'B', 960, 238], ['vTp', 'B', 765, 212],
-      ['vFo', 'C', 1140, 190], ['vTr', 'C', 1300, 330], ['vSa', 'C', 1165, 420], ['vGa', 'D', 785, 662], ['vAl', 'D', 1005, 545], ['vVl', 'D', 412, 490]
-    ].map(function (v) { var pp = P2([v[2], v[3]]); return { id: v[0], net: v[1], x: pp[0], y: pp[1] }; }),
-    cameras: [['c1', 700, 395, 'platform'], ['c2', 320, 378, 'hall'], ['c3', 1060, 355, 'hall'], ['c4', 700, 590, 'garden'], ['c5', 495, 550, 'voidlib'], ['c6', 895, 290, 'crystal']]
-      .map(function (c) { var pp = P2([c[1], c[2]]); return { id: c[0], x: pp[0], y: pp[1], room: c[3] }; }),
-    spawn: { x: Math.round(700 * K), y: Math.round(375 * K), r: 70 },
-    nodes: (function () {
-      var n = { platform: [700, 370], temple: [705, 200], stairsN: [705, 280], dome: [510, 300], west: [480, 376], wcor: [345, 376], observatory: [160, 370],
-        topdock: [355, 280], tower: [310, 470], dock: [220, 590], voidlib: [490, 550], garden: [700, 590], stairsS: [705, 455], crystal: [895, 280],
-        ecor: [900, 355], fgate: [1070, 355], forge: [1070, 250], treasury: [1235, 380], sages: [1100, 470], alchemy: [925, 490], acon: [910, 400] };
-      var o = {}; for (var k in n) o[k] = P2(n[k]); return o;
-    })(),
-    edges: [
-      ['platform', 'stairsN'], ['stairsN', 'temple'], ['platform', 'west'], ['west', 'dome'], ['west', 'wcor'], ['wcor', 'observatory'], ['wcor', 'topdock'],
-      ['wcor', 'tower'], ['tower', 'dock'], ['tower', 'voidlib'], ['voidlib', 'garden'], ['platform', 'stairsS'], ['stairsS', 'garden'], ['platform', 'ecor'],
-      ['ecor', 'crystal'], ['ecor', 'fgate'], ['fgate', 'forge'], ['fgate', 'treasury'], ['ecor', 'acon'], ['acon', 'alchemy'], ['alchemy', 'sages'], ['sages', 'treasury']
-    ]
-  };
-
   var MAP = {};
-  var DEFS = { nave: DEF_NAVE, abisal: DEF_ABISAL, ciudadela: DEF_CIT };
+  var DEFS = { nave: DEF_NAVE, abisal: DEF_ABISAL };
   MAP.DEFS = DEFS;
-  MAP.IDS = ['nave', 'abisal', 'ciudadela'];
+  MAP.IDS = ['nave', 'abisal'];
   MAP.TASK_TYPES = ['wires', 'numbers', 'download', 'calibrate', 'card', 'asteroids', 'simon', 'pipes', 'memory', 'fill', 'clean', 'maze', 'sort', 'safe'];
 
   MAP.inRect = function (x, y) {
@@ -358,7 +311,7 @@
   MAP.use = function (id) {
     var d = DEFS[id] || DEF_NAVE;
     if (MAP.id === d.id) return false;
-    ['id', 'name', 'w', 'h', 'wallFace', 'image', 'rooms', 'corridors', 'stations', 'vents', 'cameras', 'labels', 'spawn', 'nodes', 'edges'].forEach(function (k) { MAP[k] = d[k]; });
+    ['id', 'name', 'w', 'h', 'wallFace', 'rooms', 'corridors', 'stations', 'vents', 'cameras', 'labels', 'spawn', 'nodes', 'edges'].forEach(function (k) { MAP[k] = d[k]; });
     MAP.holes = d.holes || [];
     MAP.rects = MAP.rooms.concat(MAP.corridors);
     GW = Math.ceil(MAP.w / CELL) + 2; GH = Math.ceil(MAP.h / CELL) + 2; GRID = null;

@@ -664,38 +664,10 @@
     return cv;
   }
 
-  // Mapas hechos con una imagen de fondo: la imagen + carteles + rejillas se guardan una vez
-  var imgs = {}, imgCache = {};
-  function imageLayer(sk, lang, tr) {
-    var key = MAP.id + '|' + lang;
-    if (imgCache[key]) return imgCache[key];
-    var im = imgs[MAP.image];
-    if (!im) { im = imgs[MAP.image] = new Image(); im.onload = function () { im.ready = true; }; im.src = MAP.image; }
-    if (!im.ready) return null;
-    var k = im.naturalWidth / MAP.w, cv = document.createElement('canvas');
-    cv.width = im.naturalWidth; cv.height = im.naturalHeight;
-    var c = cv.getContext('2d');
-    c.drawImage(im, 0, 0);
-    c.setTransform(k, 0, 0, k, 0, 0);
-    if (sk.decorate) sk.decorate(c, tr);
-    vents(c);
-    imgCache[key] = cv;
-    return cv;
-  }
-
   // opts: { t, highlight: [ids], lightsOut, reactor, tr, res: píxeles por unidad del mundo }
   function draw(ctx, opts) {
     opts = opts || {};
     var t = opts.t || 0;
-    if (MAP.image) {
-      var ski = skin(), lay = imageLayer(ski, (root.I18N && root.I18N.lang) || 'es', opts.tr);
-      ctx.fillStyle = ski.void || '#0a0816'; ctx.fillRect(-PAD * 3, -PAD * 3, MAP.w + PAD * 6, MAP.h + PAD * 6);
-      if (lay) ctx.drawImage(lay, 0, 0, MAP.w, MAP.h);
-      if (ski.animDecor) ski.animDecor(ctx, t, opts);
-      var hl2 = opts.highlight || [];
-      MAP.stations.forEach(function (s) { station(ctx, s, t, hl2.indexOf(s.id) >= 0, opts.lightsOut, opts.reactor); });
-      return;
-    }
     var res = opts.res || 1;
     var k = Math.max(0.5, Math.min(2.5, Math.ceil(res * 2) / 2));
     var lang = (root.I18N && root.I18N.lang) || 'es';
