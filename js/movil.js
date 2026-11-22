@@ -321,7 +321,10 @@
       var b = document.createElement('b'); b.textContent = imp ? t('ph.fakeTasks') : t('ph.myTasks'); box.appendChild(b);
       me.tasks.forEach(function (x) {
         var d = document.createElement('div');
-        d.textContent = stationName(x[0]);
+        if (x.length > 2) {   // tarea en varios pasos: «Sala A → Sala B: Nombre (1/2)»
+          var a = MAP.station(x[0]), z = MAP.station(x[7]);
+          d.textContent = (x[1] ? t(MAP.room(z.room).name) : t(MAP.room(a.room).name) + (x[3] < x[4] - 1 ? ' → ' + t(MAP.room(z.room).name) : '')) + ': ' + t('chain.' + x[5]) + ' (' + Math.min(x[4], x[3] + (x[1] ? 1 : 1)) + '/' + x[4] + ')';
+        } else d.textContent = stationName(x[0]);
         if (x[1] && !imp) d.className = 'done';
         box.appendChild(d);
       });
@@ -379,7 +382,11 @@
     if (st.type === 'admin') { panel = 'adm'; $('admModal').classList.remove('hidden'); return; }
     panel = 'mg';
     $('mgModal').classList.remove('hidden');
-    mgClose = MG.open(st.type, $('mgBox'), function () { send({ t: 'done', sid: sid }); closePanel(); });
+    var mg = st.type, extra = null;
+    (s && s.me && s.me.tasks || []).forEach(function (x) {
+      if (x[0] === sid && !x[1] && x.length > 2 && !extra) { mg = x[2]; var z = MAP.station(x[7]); extra = { code: x[6], room: z ? t(MAP.room(z.room).name) : '' }; }
+    });
+    mgClose = MG.open(mg, $('mgBox'), function () { send({ t: 'done', sid: sid }); closePanel(); }, extra);
   }
   function closePanel() {
     if (mgClose) mgClose();
@@ -585,25 +592,36 @@
       }
     });
   }
+  var camIdx = 0;
+  function camRoomName(cam) { return cam.room === 'hall' ? t('ph.camHall') : (MAP.room(cam.room) ? t(MAP.room(cam.room).name) : ''); }
+  $('camPrev').onclick = function () { camIdx = (camIdx + MAP.cameras.length - 1) % MAP.cameras.length; vib(15); };
+  $('camNext').onclick = function () { camIdx = (camIdx + 1) % MAP.cameras.length; vib(15); };
   function drawCams() {
-    var cvs = $('camModal').querySelectorAll('canvas'), time = performance.now() / 1000;
-    var dpr = window.devicePixelRatio || 1;
-    MAP.cameras.forEach(function (cam, i) {
-      var c = cvs[i]; if (!c) return;
-      var W = c.clientWidth, H = c.clientHeight;
-      if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
-      var x = c.getContext('2d');
-      var sc = Math.min(c.width, c.height) / 360;
-      x.setTransform(sc, 0, 0, sc, c.width / 2 - cam.x * sc, c.height / 2 - cam.y * sc);
-      DRAW.ship(x, { t: time, tr: t, lightsOut: !!s.dark, reactor: !!s.reactor, res: sc });
-      var feed = (s.cams && s.cams[i]) || { p: [], b: [] };
-      feed.b.forEach(function (b) { DRAW.frozen(x, b[0], b[1], hexOf(b[2]), time, b[3]); });
-      feed.p.forEach(function (p) { DRAW.character(x, p[0], p[1], hexOf(p[2]), { look: p[3], t: time }); });
-      x.setTransform(1, 0, 0, 1, 0, 0);
-      x.fillStyle = 'rgba(80,255,140,0.06)';
-      for (var y = 0; y < c.height; y += 4) x.fillRect(0, y, c.width, 1);
-      x.fillStyle = Math.sin(time * 4) > 0 ? '#ff3b3b' : '#6a1a1a'; x.beginPath(); x.arc(14 * dpr, 14 * dpr, 5 * dpr, 0, Math.PI * 2); x.fill();
-    });
+    var time = performance.now() / 1000, dpr = window.devicePixelRatio || 1;
+    if (camIdx >= MAP.cameras.length) camIdx = 0;
+    var cam = MAP.cameras[camIdx], c = $('camCv');
+    var W = c.clientWidth, H = c.clientHeight;
+    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    var x = c.getContext('2d');
+    x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
+    var sc = Math.min(c.width / 560, c.height / 420);
+    x.setTransform(sc, 0, 0, sc, c.width / 2 - cam.x * sc, c.height / 2 - cam.y * sc);
+    DRAW.ship(x, { t: time, tr: t, lightsOut: !!s.dark, reactor: !!s.reactor, res: sc });
+    var feed = (s.cams && s.cams[camIdx]) || { p: [], b: [] };
+    feed.b.forEach(function (b) { DRAW.frozen(x, b[0], b[1], hexOf(b[2]), time, b[3]); });
+    feed.p.forEach(function (p) { DRAW.character(x, p[0], p[1], hexOf(p[2]), { look: p[3], t: time, name: p[4] }); });
+    // fuera del alcance de la cámara: más oscuro
+    x.save(); x.beginPath(); x.rect(cam.x - 2000, cam.y - 2000, 4000, 4000);
+    var poly = DRAW.visibility(cam.x, cam.y, 300, 160);
+    x.moveTo(poly[0], poly[1]); for (var i = 2; i < poly.length; i += 2) x.lineTo(poly[i], poly[i + 1]); x.closePath();
+    x.fillStyle = 'rgba(0,0,0,0.55)'; x.fill('evenodd'); x.restore();
+    x.setTransform(1, 0, 0, 1, 0, 0);
+    x.fillStyle = 'rgba(80,255,140,0.06)';
+    for (var y = 0; y < c.height; y += 4) x.fillRect(0, y, c.width, 1);
+    x.fillStyle = Math.sin(time * 4) > 0 ? '#ff3b3b' : '#6a1a1a'; x.beginPath(); x.arc(16 * dpr, 16 * dpr, 6 * dpr, 0, Math.PI * 2); x.fill();
+    x.font = 'bold ' + (13 * dpr) + 'px system-ui, sans-serif'; x.fillStyle = '#fff'; x.textBaseline = 'middle'; x.fillText('REC', 28 * dpr, 16 * dpr);
+    var n = feed.p.length + feed.b.length;
+    $('camLabel').textContent = t('ph.camN', { n: camIdx + 1, m: MAP.cameras.length, room: camRoomName(cam) }) + (n ? '  ·  👀 ' + feed.p.length : '');
   }
 
   // Animación de expulsión (astronauta flotando en el espacio)

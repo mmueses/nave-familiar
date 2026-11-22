@@ -42,19 +42,19 @@
     // Especiales: emergency (reunión), lights (luces), reactor (arreglar reactor), cameras, admin
     stations: [
       { id: 's1',  room: 'cafe',       x: 800,  y: 95,  type: 'wires',     name: 'task.wires' },
-      { id: 's2',  room: 'cafe',       x: 1020, y: 260, type: 'download',  name: 'task.download' },
+      { id: 's2',  room: 'cafe',       x: 1020, y: 260, type: 'clean',     name: 'task.cleanWindow' },
       { id: 'em',  room: 'cafe',       x: 910,  y: 140, type: 'emergency', name: 'task.emergency' },
       { id: 'm1',  room: 'medbay',     x: 455,  y: 115, type: 'calibrate', name: 'task.medscan' },
       { id: 'm2',  room: 'medbay',     x: 590,  y: 210, type: 'numbers',   name: 'task.medkit' },
-      { id: 'g1',  room: 'green',      x: 1255, y: 115, type: 'download',  name: 'task.water' },
-      { id: 'g2',  room: 'green',      x: 1390, y: 205, type: 'wires',     name: 'task.growlights' },
+      { id: 'g1',  room: 'green',      x: 1255, y: 115, type: 'fill',      name: 'task.water' },
+      { id: 'g2',  room: 'green',      x: 1390, y: 205, type: 'pipes',     name: 'task.irrigation' },
       { id: 's3',  room: 'engines',    x: 330,  y: 365, type: 'calibrate', name: 'task.calibrateEngine' },
-      { id: 's5',  room: 'engines',    x: 510,  y: 540, type: 'download',  name: 'task.fuelEngine' },
-      { id: 's6',  room: 'bridge',     x: 1500, y: 380, type: 'numbers',   name: 'task.course' },
-      { id: 's7',  room: 'bridge',     x: 1370, y: 515, type: 'download',  name: 'task.download' },
-      { id: 's8',  room: 'lab',        x: 650,  y: 635, type: 'numbers',   name: 'task.samples' },
+      { id: 's5',  room: 'engines',    x: 510,  y: 540, type: 'fill',      name: 'task.fuelEngine' },
+      { id: 's6',  room: 'bridge',     x: 1500, y: 380, type: 'maze',      name: 'task.course' },
+      { id: 's7',  room: 'bridge',     x: 1370, y: 515, type: 'memory',    name: 'task.starPairs' },
+      { id: 's8',  room: 'lab',        x: 650,  y: 635, type: 'sort',      name: 'task.samples' },
       { id: 's9',  room: 'lab',        x: 830,  y: 775, type: 'calibrate', name: 'task.scanner' },
-      { id: 's10', room: 'storage',    x: 1050, y: 635, type: 'wires',     name: 'task.boxes' },
+      { id: 's10', room: 'storage',    x: 1050, y: 635, type: 'safe',      name: 'task.safe' },
       { id: 's11', room: 'storage',    x: 1230, y: 775, type: 'download',  name: 'task.fuel' },
       { id: 'lt',  room: 'electrical', x: 330,  y: 670, type: 'lights',    name: 'task.lights' },
       { id: 'e1',  room: 'electrical', x: 480,  y: 775, type: 'wires',     name: 'task.electricWires' },
@@ -74,8 +74,9 @@
     ],
     // Cámaras de seguridad (se ven desde la sala de Seguridad)
     cameras: [
-      { id: 'c1', x: 265,  y: 430 }, { id: 'c2', x: 800,  y: 430 },
-      { id: 'c3', x: 1260, y: 430 }, { id: 'c4', x: 565,  y: 720 }
+      { id: 'c1', x: 910,  y: 175, room: 'cafe' },  { id: 'c2', x: 420,  y: 440, room: 'engines' },
+      { id: 'c3', x: 820,  y: 430, room: 'hall' },  { id: 'c4', x: 740,  y: 700, room: 'lab' },
+      { id: 'c5', x: 1140, y: 700, room: 'storage' }, { id: 'c6', x: 1420, y: 440, room: 'bridge' }
     ],
     labels: {
       reactor: [130, 372], engines: [420, 352], medbay: [520, 100], security: [622, 345], cafe: [910, 276],
@@ -151,26 +152,26 @@
     stations: [
       { id: 'em',  room: 'cafe',     x: 710,  y: 110, type: 'emergency', name: 'task.emergency' },
       { id: 'k1',  room: 'cafe',     x: 595,  y: 205, type: 'wires',     name: 'task.wires' },
-      { id: 'k2',  room: 'cafe',     x: 830,  y: 75,  type: 'download',  name: 'task.download' },
+      { id: 'k2',  room: 'cafe',     x: 830,  y: 75,  type: 'clean',     name: 'task.cleanWindow' },
       { id: 'cm',  room: 'comms',    x: 395,  y: 95,  type: 'download',  name: 'task.comms' },
-      { id: 'd1',  room: 'dorms',    x: 1055, y: 95,  type: 'numbers',   name: 'task.lockers' },
-      { id: 'o1',  room: 'oxygen',   x: 1165, y: 95,  type: 'calibrate', name: 'task.oxyFilter' },
-      { id: 'o2',  room: 'oxygen',   x: 1275, y: 190, type: 'wires',     name: 'task.oxyPump' },
+      { id: 'd1',  room: 'dorms',    x: 1055, y: 95,  type: 'safe',      name: 'task.lockers' },
+      { id: 'o1',  room: 'oxygen',   x: 1165, y: 95,  type: 'clean',     name: 'task.oxyFilter' },
+      { id: 'o2',  room: 'oxygen',   x: 1275, y: 190, type: 'pipes',     name: 'task.oxyPump' },
       { id: 'so',  room: 'sonar',    x: 505,  y: 275, type: 'calibrate', name: 'task.sonar' },
-      { id: 'b1',  room: 'biolab',   x: 75,   y: 365, type: 'numbers',   name: 'task.samples' },
-      { id: 'b2',  room: 'biolab',   x: 245,  y: 515, type: 'download',  name: 'task.fishFeed' },
+      { id: 'b1',  room: 'biolab',   x: 75,   y: 365, type: 'sort',      name: 'task.samples' },
+      { id: 'b2',  room: 'biolab',   x: 245,  y: 515, type: 'fill',      name: 'task.fishFeed' },
       { id: 'ro',  room: 'robotics', x: 375,  y: 645, type: 'wires',     name: 'task.robot' },
       { id: 'tr',  room: 'trench',   x: 245,  y: 795, type: 'asteroids', name: 'task.trench' },
       { id: 'dm',  room: 'dome',     x: 960,  y: 330, type: 'simon',     name: 'task.domeLights' },
       { id: 'dk',  room: 'dome',     x: 680,  y: 570, type: 'card',      name: 'task.card' },
-      { id: 'fo',  room: 'foundry',  x: 1135, y: 275, type: 'numbers',   name: 'task.forge' },
-      { id: 'st',  room: 'storage',  x: 1265, y: 645, type: 'wires',     name: 'task.boxes' },
+      { id: 'fo',  room: 'foundry',  x: 1135, y: 275, type: 'fill',      name: 'task.forge' },
+      { id: 'st',  room: 'storage',  x: 1265, y: 645, type: 'sort',      name: 'task.boxes' },
       { id: 'rx',  room: 'reactor',  x: 1395, y: 355, type: 'reactor',   name: 'task.reactorFix' },
       { id: 'r2',  room: 'reactor',  x: 1565, y: 525, type: 'simon',     name: 'task.startReactor' },
-      { id: 'pd',  room: 'pods',     x: 1545, y: 675, type: 'download',  name: 'task.pods' },
+      { id: 'pd',  room: 'pods',     x: 1545, y: 675, type: 'maze',      name: 'task.podPilot' },
       { id: 'cam', room: 'security', x: 545,  y: 750, type: 'cameras',   name: 'task.cameras' },
       { id: 'adm', room: 'admin',    x: 760,  y: 735, type: 'admin',     name: 'task.adminMap' },
-      { id: 'a1',  room: 'admin',    x: 905,  y: 735, type: 'card',      name: 'task.card' },
+      { id: 'a1',  room: 'admin',    x: 905,  y: 735, type: 'memory',    name: 'task.reports' },
       { id: 'lt',  room: 'electrical', x: 1035, y: 750, type: 'lights',  name: 'task.lights' },
       { id: 'e1',  room: 'electrical', x: 1145, y: 820, type: 'wires',   name: 'task.electricWires' }
     ],
@@ -182,8 +183,9 @@
       { id: 'vSt', net: 'E', x: 1105, y: 660 }, { id: 'vEl', net: 'E', x: 1030, y: 830 }, { id: 'vPo', net: 'E', x: 1385, y: 815 }
     ],
     cameras: [
-      { id: 'c1', x: 360,  y: 450 }, { id: 'c2', x: 680,  y: 450 },
-      { id: 'c3', x: 1290, y: 450 }, { id: 'c4', x: 1270, y: 790 }
+      { id: 'c1', x: 710,  y: 150, room: 'cafe' },  { id: 'c2', x: 160,  y: 450, room: 'biolab' },
+      { id: 'c3', x: 450,  y: 450, room: 'hall' },  { id: 'c4', x: 820,  y: 340, room: 'dome' },
+      { id: 'c5', x: 1190, y: 450, room: 'hall' },  { id: 'c6', x: 1470, y: 440, room: 'reactor' }
     ],
     spawn: { x: 710, y: 175, r: 70 },
     nodes: {
@@ -203,11 +205,58 @@
     ]
   };
 
+  // ---------- Tercer mapa: Ciudadela de los Eones (fondo = imagen de la familia, img/ciudadela.webp) ----------
+  // Coordenadas tomadas sobre la imagen (1376 x 768) y multiplicadas por K al cargar.
+  var K = 1.6;
+  function R4(o) { return { x: Math.round(o[0] * K), y: Math.round(o[1] * K), w: Math.round((o[2] - o[0]) * K), h: Math.round((o[3] - o[1]) * K) }; }
+  function P2(a) { return [Math.round(a[0] * K), Math.round(a[1] * K)]; }
+  var CIT_ROOMS = [
+    ['platform', 'room.platform', [590, 320, 810, 415]], ['temple', 'room.temple', [630, 165, 780, 225]], ['dome', 'room.coreDome', [420, 262, 600, 338]],
+    ['topdock', 'room.topDock', [250, 250, 400, 300]], ['observatory', 'room.observatory', [70, 300, 260, 430]], ['tower', 'room.watchTower', [230, 410, 400, 560]],
+    ['dock', 'room.dock', [120, 540, 330, 640]], ['voidlib', 'room.voidLib', [400, 470, 590, 630]], ['garden', 'room.garden', [605, 500, 800, 680]],
+    ['crystal', 'room.crystalLib', [815, 220, 975, 330]], ['forge', 'room.forge', [985, 170, 1160, 330]], ['treasury', 'room.treasury', [1150, 310, 1320, 445]],
+    ['sages', 'room.sages', [1020, 400, 1180, 540]], ['alchemy', 'room.alchemy', [830, 420, 1020, 560]]
+  ];
+  var CIT_CORR = [[250, 338, 590, 415], [680, 225, 730, 320], [680, 415, 730, 500], [810, 330, 1150, 380], [880, 380, 940, 420], [330, 300, 380, 338], [585, 560, 610, 600]];
+  var CIT_ST = [
+    ['em', 'platform', 700, 398, 'emergency', 'task.emergency'], ['tp', 'temple', 705, 195, 'simon', 'task.altar'], ['dc', 'dome', 455, 300, 'calibrate', 'task.starAlign'],
+    ['td', 'topdock', 300, 275, 'fill', 'task.shipFuel'], ['ob', 'observatory', 120, 410, 'maze', 'task.constellation'], ['cam', 'tower', 290, 548, 'cameras', 'task.cameras'],
+    ['dk', 'dock', 150, 626, 'download', 'task.download'], ['vl', 'voidlib', 440, 600, 'memory', 'task.runes'], ['lt', 'voidlib', 560, 495, 'lights', 'task.lights'],
+    ['gp', 'garden', 630, 560, 'pipes', 'task.irrigation'], ['gc', 'garden', 765, 530, 'clean', 'task.cleanWindow'], ['ap', 'alchemy', 860, 470, 'sort', 'task.potions'],
+    ['adm', 'alchemy', 990, 445, 'admin', 'task.adminMap'], ['sf', 'sages', 1120, 470, 'safe', 'task.safe'], ['sn', 'sages', 1050, 425, 'numbers', 'task.formula'],
+    ['tc', 'treasury', 1285, 420, 'card', 'task.card'], ['ti', 'treasury', 1185, 335, 'download', 'task.inventory'], ['rx', 'forge', 1020, 200, 'reactor', 'task.reactorFix'],
+    ['ff', 'forge', 1125, 300, 'fill', 'task.forge'], ['cw', 'crystal', 845, 250, 'wires', 'task.crystalWires'], ['ca', 'crystal', 950, 305, 'asteroids', 'task.asteroids']
+  ];
+  var DEF_CIT = {
+    id: 'ciudadela', name: 'map.ciudadela', w: Math.round(1376 * K), h: Math.round(768 * K), wallFace: 0, image: 'img/ciudadela.webp',
+    rooms: CIT_ROOMS.map(function (r) { var o = R4(r[2]); o.id = r[0]; o.name = r[1]; return o; }),
+    corridors: CIT_CORR.map(R4),
+    stations: CIT_ST.map(function (q) { var pp = P2([q[2], q[3]]); return { id: q[0], room: q[1], x: pp[0], y: pp[1], type: q[4], name: q[5] }; }),
+    vents: [
+      ['vOb', 'A', 90, 410], ['vDk', 'A', 300, 625], ['vTd', 'A', 385, 262], ['vDm', 'B', 588, 280], ['vCr', 'B', 960, 238], ['vTp', 'B', 765, 212],
+      ['vFo', 'C', 1140, 190], ['vTr', 'C', 1300, 330], ['vSa', 'C', 1165, 420], ['vGa', 'D', 785, 662], ['vAl', 'D', 1005, 545], ['vVl', 'D', 412, 490]
+    ].map(function (v) { var pp = P2([v[2], v[3]]); return { id: v[0], net: v[1], x: pp[0], y: pp[1] }; }),
+    cameras: [['c1', 700, 395, 'platform'], ['c2', 320, 378, 'hall'], ['c3', 1060, 355, 'hall'], ['c4', 700, 590, 'garden'], ['c5', 495, 550, 'voidlib'], ['c6', 895, 290, 'crystal']]
+      .map(function (c) { var pp = P2([c[1], c[2]]); return { id: c[0], x: pp[0], y: pp[1], room: c[3] }; }),
+    spawn: { x: Math.round(700 * K), y: Math.round(375 * K), r: 70 },
+    nodes: (function () {
+      var n = { platform: [700, 370], temple: [705, 200], stairsN: [705, 280], dome: [510, 300], west: [480, 376], wcor: [345, 376], observatory: [160, 370],
+        topdock: [355, 280], tower: [310, 470], dock: [220, 590], voidlib: [490, 550], garden: [700, 590], stairsS: [705, 455], crystal: [895, 280],
+        ecor: [900, 355], fgate: [1070, 355], forge: [1070, 250], treasury: [1235, 380], sages: [1100, 470], alchemy: [925, 490], acon: [910, 400] };
+      var o = {}; for (var k in n) o[k] = P2(n[k]); return o;
+    })(),
+    edges: [
+      ['platform', 'stairsN'], ['stairsN', 'temple'], ['platform', 'west'], ['west', 'dome'], ['west', 'wcor'], ['wcor', 'observatory'], ['wcor', 'topdock'],
+      ['wcor', 'tower'], ['tower', 'dock'], ['tower', 'voidlib'], ['voidlib', 'garden'], ['platform', 'stairsS'], ['stairsS', 'garden'], ['platform', 'ecor'],
+      ['ecor', 'crystal'], ['ecor', 'fgate'], ['fgate', 'forge'], ['fgate', 'treasury'], ['ecor', 'acon'], ['acon', 'alchemy'], ['alchemy', 'sages'], ['sages', 'treasury']
+    ]
+  };
+
   var MAP = {};
-  var DEFS = { nave: DEF_NAVE, abisal: DEF_ABISAL };
+  var DEFS = { nave: DEF_NAVE, abisal: DEF_ABISAL, ciudadela: DEF_CIT };
   MAP.DEFS = DEFS;
-  MAP.IDS = ['nave', 'abisal'];
-  MAP.TASK_TYPES = ['wires', 'numbers', 'download', 'calibrate', 'card', 'asteroids', 'simon'];
+  MAP.IDS = ['nave', 'abisal', 'ciudadela'];
+  MAP.TASK_TYPES = ['wires', 'numbers', 'download', 'calibrate', 'card', 'asteroids', 'simon', 'pipes', 'memory', 'fill', 'clean', 'maze', 'sort', 'safe'];
 
   MAP.inRect = function (x, y) {
     for (var h = 0; h < MAP.holes.length; h++) {
@@ -309,7 +358,7 @@
   MAP.use = function (id) {
     var d = DEFS[id] || DEF_NAVE;
     if (MAP.id === d.id) return false;
-    ['id', 'name', 'w', 'h', 'wallFace', 'rooms', 'corridors', 'stations', 'vents', 'cameras', 'labels', 'spawn', 'nodes', 'edges'].forEach(function (k) { MAP[k] = d[k]; });
+    ['id', 'name', 'w', 'h', 'wallFace', 'image', 'rooms', 'corridors', 'stations', 'vents', 'cameras', 'labels', 'spawn', 'nodes', 'edges'].forEach(function (k) { MAP[k] = d[k]; });
     MAP.holes = d.holes || [];
     MAP.rects = MAP.rooms.concat(MAP.corridors);
     GW = Math.ceil(MAP.w / CELL) + 2; GH = Math.ceil(MAP.h / CELL) + 2; GRID = null;

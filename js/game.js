@@ -15,7 +15,7 @@
   var CFG = {
     speed: 190, radius: 10,
     useRange: 48, freezeRange: 55, reportRange: 85, ventRange: 42,
-    vision: 190, visionDark: 80, impVision: 230, ghostVision: 300, camRange: 190,
+    vision: 190, visionDark: 80, impVision: 230, ghostVision: 300, camRange: 300,
     freezeCd: 25, freezeCdStart: 15, sabCd: 40, sabCdStart: 20, meetingCdStart: 12,
     reactorTime: 45,
     splashTime: 2.5, discussTime: 30, voteTime: 35, ejectTime: 8, introTime: 6,
@@ -195,7 +195,7 @@
       p.stats = { tasks: 0, freezes: 0 };
       if (p.bot) { p.level = p.level || (1 + Math.floor(Math.random() * 30)); if (looks() && !p.look) p.look = looks().randomFor(p.level); }
       p.freezeAt = 0; p.sabAt = 0;
-      p.tasks = shuffle(taskIds.slice()).slice(0, self.settings.tasks).map(function (sid) { return { sid: sid, done: false }; });
+      p.tasks = self.makeTasks(taskIds, self.settings.tasks);
       p.witness = {};
       p.ai = null;
       p.vote = undefined; p.ready = false;
@@ -213,6 +213,33 @@
     return true;
   };
 
+  // Tareas: sencillas (un sitio) y en varios pasos (empezar en un sitio y terminar en otro de otra sala).
+  // Cada tarea: { sid: estación actual, done, steps: [{sid, mg}], step, kind, code }
+  Game.CHAINS = [
+    { kind: 'data', mgs: ['download', 'upload'] },
+    { kind: 'code', mgs: ['codeRead', 'codeEnter'] },
+    { kind: 'fuel', mgs: ['fuelGet', 'fuelPour'] }
+  ];
+  G.makeTasks = function (taskIds, n) {
+    var pool = shuffle(taskIds.slice()), out = [], used = {};
+    var nChain = n >= 6 ? 2 : (n >= 4 ? Math.random() < 0.5 ? 1 : 2 : 1);
+    var chains = shuffle(Game.CHAINS.slice()).slice(0, nChain);
+    chains.forEach(function (ch) {
+      var a = null, b = null;
+      for (var i = 0; i < pool.length && !a; i++) if (!used[pool[i]]) a = pool[i];
+      if (!a) return;
+      var sa = MAP.station(a);
+      var far = pool.filter(function (id) { var sb = MAP.station(id); return !used[id] && id !== a && sb.room !== sa.room && Math.hypot(sb.x - sa.x, sb.y - sa.y) > 450; });
+      if (!far.length) far = pool.filter(function (id) { return !used[id] && id !== a && MAP.station(id).room !== sa.room; });
+      if (!far.length) return;
+      b = far[Math.floor(Math.random() * far.length)];
+      used[a] = used[b] = 1;
+      var code = ''; for (var k = 0; k < 4; k++) code += Math.floor(Math.random() * 10);
+      out.push({ sid: a, done: false, kind: ch.kind, step: 0, steps: [{ sid: a, mg: ch.mgs[0] }, { sid: b, mg: ch.mgs[1] }], code: code });
+    });
+    pool.forEach(function (id) { if (out.length < n && !used[id]) { used[id] = 1; out.push({ sid: id, done: false }); } });
+    return out;
+  };
   G.placeAtSpawn = function () {
     var all = this.list();
     all.forEach(function (p, i) {
@@ -270,7 +297,10 @@
     this.list().forEach(function (p) {
       if (p.role !== 'crew') return;
       var gone = !p.alive || p.ejected;   // los congelados ya no pueden hacer tareas: sus pendientes dejan de contar
-      p.tasks.forEach(function (t) { if (t.done) { total++; done++; } else if (!gone) total++; });
+      p.tasks.forEach(function (t) {
+        var n = t.steps ? t.steps.length : 1, d = t.done ? n : (t.steps ? t.step : 0);
+        if (t.done) { total += n; done += n; } else if (!gone) { total += n; done += d; } else { total += d; done += d; }
+      });
     });
     return total ? done / total : 0;
   };
@@ -394,7 +424,13 @@
     if (s.type === 'lights') { if (this.lightsOut) { this.lightsOut = false; this.onEvent('lightsOn'); } return; }
     if (s.type === 'reactor') { if (this.reactorAt) { this.reactorAt = 0; this.onEvent('reactorOff'); } return; }
     if (s.type === 'cameras' || s.type === 'admin') return;
-    p.tasks.forEach(function (t) { if (t.sid === sid && !t.done) { t.done = true; p.stats.tasks++; } });
+    for (var i = 0; i < p.tasks.length; i++) {
+      var tk = p.tasks[i];
+      if (tk.sid !== sid || tk.done) continue;
+      if (tk.steps && tk.step < tk.steps.length - 1) { tk.step++; tk.sid = tk.steps[tk.step].sid; }
+      else { tk.done = true; p.stats.tasks++; }
+      break;
+    }
     this.onEvent('task');
   };
   G.taskCancel = function (pid) {
@@ -852,7 +888,10 @@
     }
     s.me = {
       id: p.id, n: p.name, c: p.color, k: p.look || null, role: p.role, ghost: this.isGhost(p), ejected: !!p.ejected,
-      tasks: p.tasks.map(function (t) { return [t.sid, t.done ? 1 : 0]; })
+      tasks: p.tasks.map(function (t) {
+        if (!t.steps) return [t.sid, t.done ? 1 : 0];
+        return [t.sid, t.done ? 1 : 0, t.steps[t.step].mg, t.step, t.steps.length, t.kind, t.code, t.steps[t.steps.length - 1].sid];
+      })
     };
     if (p.role === 'imp') s.me.partners = this.list().filter(function (o) { return o.role === 'imp' && o !== p; }).map(function (o) { return o.name; });
     if (this.phase === 'intro') {
@@ -890,10 +929,10 @@
           var list = [];
           self.list().forEach(function (o) {
             if (o.vent || self.isGhost(o) || dist(o, c) > CFG.camRange || !MAP.clear(c.x, c.y, o.x, o.y)) return;
-            list.push([Math.round(o.x), Math.round(o.y), o.color, o.look || null]);
+            list.push([Math.round(o.x), Math.round(o.y), o.color, o.look || null, o.name]);
           });
           var bodies = self.bodies.filter(function (b) { return dist(b, c) <= CFG.camRange && MAP.clear(c.x, c.y, b.x, b.y); })
-            .map(function (b) { return [Math.round(b.x), Math.round(b.y), self.players[b.id].color]; });
+            .map(function (b) { return [Math.round(b.x), Math.round(b.y), self.players[b.id].color, self.players[b.id].look || null]; });
           return { p: list, b: bodies };
         });
       }

@@ -531,15 +531,114 @@
       circ(c, 3, 5, 18, 'rgba(0,0,0,0.3)'); circ(c, 0, 0, 18, '#3a4060', 2);
       c.save(); c.rotate(Math.sin(t) * 0.5); box(c, 4, -4, 22, 8, '#8a94b8', 3, { lw: 1.4 }); c.restore();
       circ(c, 0, 0, 10, '#e5484d', 1.6);
-    } else {
-      var col = { wires: '#f5a524', numbers: '#3e7bfa', download: '#30a46c', calibrate: '#8e4ec6', card: '#2ec5ce', simon: '#e5484d' }[s.type] || '#999';
-      box(c, -15, -15, 30, 30, '#2a2f40', 5);
-      box(c, -10, -10, 20, 20, col, 3, { lw: 1.2 });
-      c.fillStyle = 'rgba(255,255,255,0.9)'; c.font = 'bold 14px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText({ wires: '⚡', numbers: '#', download: '↓', calibrate: '◎', card: '▭', simon: '▦' }[s.type] || '?', 0, 1);
-    }
+    } else taskObject(c, s.type, t);
     c.restore();
   }
+
+  // Objetos de cada tipo de tarea (dibujados, no cuadrados de colores). Centro en (0,0), unos 40 px.
+  function taskObject(c, type, t) {
+    var i;
+    switch (type) {
+      case 'wires':   // caja de conexiones abierta con cables
+        box(c, -18, -20, 36, 38, '#5a6488', 4);
+        box(c, -14, -16, 28, 30, '#1d2236', 3, { lw: 1.2 });
+        ['#e5484d', '#3e7bfa', '#f2d63a', '#30c06c'].forEach(function (col, k) {
+          c.strokeStyle = col; c.lineWidth = 2.6; c.beginPath(); c.moveTo(-10, -11 + k * 7); c.bezierCurveTo(-2, -11 + k * 7 + 8, 2, -11 + ((k + 2) % 4) * 7 - 6, 10, -11 + ((k + 2) % 4) * 7); c.stroke();
+        });
+        box(c, 16, -18, 6, 34, '#8a94b8', 2, { lw: 1.2 });   // puerta
+        circ(c, 0, -23, 2.2, Math.sin(t * 4) > 0 ? '#ffe066' : '#6a5a20');
+        break;
+      case 'numbers':   // teclado numérico de pared
+        box(c, -15, -20, 30, 40, '#3a3f55', 5);
+        box(c, -11, -16, 22, 8, '#5fffc0', 2, { lw: 1 });
+        for (i = 0; i < 9; i++) box(c, -11 + (i % 3) * 8, -5 + Math.floor(i / 3) * 7.5, 6, 5.5, i === Math.floor(t * 2) % 9 ? '#ffe066' : '#c8ccda', 1.5, { lw: 0.8 });
+        break;
+      case 'download': case 'upload':   // ordenador con pantalla y barra
+        box(c, -20, 6, 40, 12, '#8a6a45', 3);
+        box(c, -16, -20, 32, 24, '#2a2f40', 4);
+        box(c, -13, -17, 26, 17, '#0e3048', 2, { lw: 1 });
+        c.fillStyle = '#30dc78'; c.fillRect(-10, -8, 20 * ((t * 0.3) % 1), 3);
+        c.fillStyle = '#7fd8ff'; c.fillRect(-10, -14, 14, 2); c.fillRect(-10, -11, 9, 2);
+        box(c, -10, 9, 20, 6, '#c8ccda', 1.5, { lw: 0.9 });
+        break;
+      case 'calibrate':   // indicador redondo con aguja
+        box(c, -4, 6, 8, 14, '#5a6488', 2);
+        circ(c, 2, 2, 19, 'rgba(0,0,0,0.3)');
+        circ(c, 0, -2, 19, '#c8ccda', 2.4); circ(c, 0, -2, 15, '#f6f7fb');
+        c.strokeStyle = '#30c06c'; c.lineWidth = 4; c.beginPath(); c.arc(0, -2, 11, Math.PI * 1.15, Math.PI * 1.45); c.stroke();
+        c.strokeStyle = '#e5484d'; c.beginPath(); c.arc(0, -2, 11, Math.PI * 1.6, Math.PI * 1.9); c.stroke();
+        var na = Math.PI * (1.2 + 0.6 * (0.5 + 0.5 * Math.sin(t * 1.3)));
+        c.strokeStyle = OUT; c.lineWidth = 2.2; c.beginPath(); c.moveTo(0, -2); c.lineTo(Math.cos(na) * 12, -2 + Math.sin(na) * 12); c.stroke();
+        circ(c, 0, -2, 2.5, OUT);
+        break;
+      case 'card':   // lector de tarjetas
+        box(c, -14, -20, 28, 40, '#3a3f55', 5);
+        box(c, -9, -14, 18, 5, '#0a0e1e', 2, { lw: 1 });
+        box(c, -8, -6, 16, 12, '#2ec5ce', 2, { lw: 1.2 }); c.fillStyle = '#ffffff'; c.fillRect(-5, -3, 6, 2); c.fillRect(-5, 1, 10, 1.5);
+        circ(c, 0, 13, 3, Math.sin(t * 3) > 0 ? '#30dc78' : '#1a4a2a', 1.2);
+        break;
+      case 'simon':   // panel de botones luminosos
+        box(c, -18, -18, 36, 36, '#2a2f40', 6);
+        for (i = 0; i < 9; i++) { var lit = Math.floor(t * 2.5 + i * 3.7) % 5 === 0; circ(c, -10 + (i % 3) * 10, -10 + Math.floor(i / 3) * 10, 3.6, lit ? ['#ff6b6b', '#ffe066', '#57e389', '#6fb6ff'][i % 4] : '#4a5070', 1); }
+        break;
+      case 'pipes':   // tuberías con rueda de válvula
+        c.lineCap = 'round';
+        [[-22, -8, 22, -8], [-22, 10, 0, 10], [0, 10, 0, -8]].forEach(function (l) { c.strokeStyle = OUT; c.lineWidth = 10; c.beginPath(); c.moveTo(l[0], l[1]); c.lineTo(l[2], l[3]); c.stroke(); c.strokeStyle = '#8a94b8'; c.lineWidth = 6; c.stroke(); });
+        c.lineCap = 'butt';
+        c.save(); c.translate(0, -8); c.rotate(t * 0.8);
+        c.strokeStyle = OUT; c.lineWidth = 6; circ(c, 0, 0, 10); c.stroke(); c.strokeStyle = '#e5484d'; c.lineWidth = 3.5; circ(c, 0, 0, 10); c.stroke();
+        for (i = 0; i < 4; i++) { c.rotate(Math.PI / 2); c.strokeStyle = '#e5484d'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(0, 0); c.lineTo(10, 0); c.stroke(); }
+        c.restore(); circ(c, 0, -8, 3, '#ffd23f', 1.2);
+        circ(c, 22, -8, 3, 'rgba(120,200,255,' + (0.5 + 0.5 * Math.sin(t * 5)) + ')');
+        break;
+      case 'memory':   // pantalla con cartas
+        box(c, -19, -18, 38, 30, '#2a2f40', 5);
+        for (i = 0; i < 8; i++) box(c, -15 + (i % 4) * 8, -14 + Math.floor(i / 4) * 11, 6, 9, (Math.floor(t * 1.5) + i) % 5 === 0 ? '#ffe066' : '#3a4a9a', 1.5, { lw: 0.8 });
+        box(c, -6, 12, 12, 6, '#5a6488', 2, { lw: 1 });
+        break;
+      case 'fill':   // depósito transparente con nivel de líquido
+        box(c, -15, -22, 30, 42, 'rgba(160,220,255,0.35)', 8);
+        c.save(); U_rr(c, -13, -20, 26, 38, 6); c.clip();
+        var lv = 4 + Math.sin(t * 0.8) * 6, gl = c.createLinearGradient(0, lv - 10, 0, 18); gl.addColorStop(0, '#5bd8ff'); gl.addColorStop(1, '#1a6ab0');
+        c.fillStyle = gl; c.beginPath(); c.moveTo(-14, lv); c.quadraticCurveTo(0, lv + Math.sin(t * 4) * 3, 14, lv); c.lineTo(14, 20); c.lineTo(-14, 20); c.closePath(); c.fill();
+        for (i = 0; i < 3; i++) circ(c, -6 + i * 6, 16 - ((t * 14 + i * 9) % 20), 1.6, 'rgba(255,255,255,0.7)');
+        c.restore();
+        c.strokeStyle = '#30dc78'; c.lineWidth = 2; c.beginPath(); c.moveTo(-17, -6); c.lineTo(17, -6); c.stroke();
+        box(c, -17, 18, 34, 6, '#5a6488', 2, { lw: 1.2 }); box(c, -17, -25, 34, 5, '#5a6488', 2, { lw: 1.2 });
+        break;
+      case 'clean':   // ventana o filtro sucio
+        box(c, -20, -18, 40, 32, '#8a94b8', 5);
+        box(c, -16, -14, 32, 24, '#2a8ab0', 3, { lw: 1.2 });
+        [[-8, -6, 6], [5, -2, 7], [-2, 5, 5], [10, 6, 4], [-11, 4, 4]].forEach(function (d) { circ(c, d[0], d[1], d[2], 'rgba(110,80,40,0.85)'); });
+        c.fillStyle = 'rgba(255,255,255,0.4)'; c.fillRect(-14, -12, 3, 20);
+        box(c, 12, 14, 10, 8, '#ffd23f', 2, { lw: 1 });   // esponja
+        break;
+      case 'maze':   // consola recreativa con joystick
+        box(c, -16, -22, 32, 42, '#6a3a9a', 6);
+        box(c, -12, -18, 24, 18, '#0d1430', 3, { lw: 1 });
+        c.strokeStyle = '#7fd8ff'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-9, -15); c.lineTo(-9, -6); c.lineTo(0, -6); c.lineTo(0, -12); c.lineTo(8, -12); c.lineTo(8, -3); c.stroke();
+        circ(c, -9 + ((t * 6) % 9), -6, 1.8, '#ff6fa8');
+        box(c, -3, 6, 6, 8, '#2a2f40', 2, { lw: 1 }); circ(c, Math.sin(t * 3) * 2, 4, 3.5, '#e5484d', 1.2);
+        circ(c, 9, 10, 2.5, '#ffe066', 1); circ(c, -9, 10, 2.5, '#57e389', 1);
+        break;
+      case 'sort':   // cajas de colores para clasificar
+        ['#e5484d', '#3e7bfa', '#f2d63a'].forEach(function (col, k) { box(c, -22 + k * 15, -4, 13, 20, col, 3); c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(-22 + k * 15, -4, 13, 4); });
+        circ(c, -6, -14 + Math.abs(Math.sin(t * 2)) * -4, 5, '#30c06c', 1.4);
+        circ(c, 8, -12, 4, '#ff9a3a', 1.2);
+        break;
+      case 'safe':   // caja fuerte con rueda
+        box(c, -19, -20, 38, 40, '#4a5070', 5);
+        box(c, -15, -16, 30, 32, '#5a6488', 3, { lw: 1.2 });
+        c.save(); c.rotate(Math.sin(t * 0.7) * 2);
+        circ(c, -2, 0, 9, '#c8ccda', 1.8); for (i = 0; i < 8; i++) { var aa = i / 8 * Math.PI * 2; c.fillStyle = OUT; c.fillRect(-2 + Math.cos(aa) * 6.5 - 0.8, Math.sin(aa) * 6.5 - 0.8, 1.6, 1.6); }
+        c.restore();
+        box(c, 9, -6, 4, 12, '#c8ccda', 2, { lw: 1 });
+        break;
+      default:
+        box(c, -15, -15, 30, 30, '#2a2f40', 5);
+    }
+  }
+  function U_rr(c, x, y, w, h, r) { rr(c, x, y, w, h, r); }
 
   // ---------- imagen guardada de la parte fija ----------
   var caches = {};
@@ -565,10 +664,38 @@
     return cv;
   }
 
+  // Mapas hechos con una imagen de fondo: la imagen + carteles + rejillas se guardan una vez
+  var imgs = {}, imgCache = {};
+  function imageLayer(sk, lang, tr) {
+    var key = MAP.id + '|' + lang;
+    if (imgCache[key]) return imgCache[key];
+    var im = imgs[MAP.image];
+    if (!im) { im = imgs[MAP.image] = new Image(); im.onload = function () { im.ready = true; }; im.src = MAP.image; }
+    if (!im.ready) return null;
+    var k = im.naturalWidth / MAP.w, cv = document.createElement('canvas');
+    cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+    var c = cv.getContext('2d');
+    c.drawImage(im, 0, 0);
+    c.setTransform(k, 0, 0, k, 0, 0);
+    if (sk.decorate) sk.decorate(c, tr);
+    vents(c);
+    imgCache[key] = cv;
+    return cv;
+  }
+
   // opts: { t, highlight: [ids], lightsOut, reactor, tr, res: píxeles por unidad del mundo }
   function draw(ctx, opts) {
     opts = opts || {};
     var t = opts.t || 0;
+    if (MAP.image) {
+      var ski = skin(), lay = imageLayer(ski, (root.I18N && root.I18N.lang) || 'es', opts.tr);
+      ctx.fillStyle = ski.void || '#0a0816'; ctx.fillRect(-PAD * 3, -PAD * 3, MAP.w + PAD * 6, MAP.h + PAD * 6);
+      if (lay) ctx.drawImage(lay, 0, 0, MAP.w, MAP.h);
+      if (ski.animDecor) ski.animDecor(ctx, t, opts);
+      var hl2 = opts.highlight || [];
+      MAP.stations.forEach(function (s) { station(ctx, s, t, hl2.indexOf(s.id) >= 0, opts.lightsOut, opts.reactor); });
+      return;
+    }
     var res = opts.res || 1;
     var k = Math.max(0.5, Math.min(2.5, Math.ceil(res * 2) / 2));
     var lang = (root.I18N && root.I18N.lang) || 'es';
