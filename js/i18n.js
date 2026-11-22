@@ -16,6 +16,8 @@
 
       'room.cafe': 'Comedor', 'room.engines': 'Motores', 'room.bridge': 'Puente de mando',
       'room.lab': 'Laboratorio', 'room.storage': 'Almacén',
+      'room.medbay': 'Enfermería', 'room.green': 'Invernadero',
+      'task.medscan': 'Escáner médico', 'task.medkit': 'Ordenar botiquín', 'task.water': 'Regar plantas', 'task.growlights': 'Lámparas de cultivo',
 
       'task.wires': 'Conectar cables', 'task.download': 'Descargar datos', 'task.emergency': 'Botón de reunión',
       'task.calibrateEngine': 'Calibrar motor', 'task.lights': 'Panel de luces', 'task.course': 'Fijar rumbo',
@@ -134,6 +136,8 @@
 
       'room.cafe': 'Cafeteria', 'room.engines': 'Engines', 'room.bridge': 'Bridge',
       'room.lab': 'Laboratory', 'room.storage': 'Storage',
+      'room.medbay': 'Medical bay', 'room.green': 'Greenhouse',
+      'task.medscan': 'Medical scan', 'task.medkit': 'Sort first-aid kit', 'task.water': 'Water plants', 'task.growlights': 'Grow lights',
 
       'task.wires': 'Connect wires', 'task.download': 'Download data', 'task.emergency': 'Meeting button',
       'task.calibrateEngine': 'Calibrate engine', 'task.lights': 'Lights panel', 'task.course': 'Set course',

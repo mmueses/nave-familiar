@@ -415,11 +415,11 @@
   var mini = $('miniCv'), mctx = mini.getContext('2d');
   function drawMini(time) {
     var dpr = window.devicePixelRatio || 1;
-    var W = mini.clientWidth, H = W * 0.62;
+    var W = mini.clientWidth, H = W * 0.7;
     mini.style.height = H + 'px';
     if (mini.width !== Math.round(W * dpr)) { mini.width = Math.round(W * dpr); mini.height = Math.round(H * dpr); }
-    var sc = Math.min(mini.width / 1000, mini.height / 620);
-    mctx.setTransform(sc, 0, 0, sc, (mini.width - 1000 * sc) / 2, (mini.height - 600 * sc) / 2);
+    var sc = Math.min(mini.width / (MAP.w + 170), mini.height / (MAP.h + 120));
+    mctx.setTransform(sc, 0, 0, sc, (mini.width - MAP.w * sc) / 2, (mini.height - MAP.h * sc) / 2);
     DRAW.ship(mctx, { labels: true, t: time, tr: t, highlight: pendingStations(), lightsOut: !!s.dark });
     var p = 0.6 + 0.4 * Math.sin(time * 6);
     mctx.fillStyle = 'rgba(255,230,107,' + p + ')';

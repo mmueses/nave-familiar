@@ -191,10 +191,11 @@
   resize();
   function drawMap(time) {
     var w = cv.width, h = cv.height;
-    var s = Math.min(w / 1080, h / 700);
+    var M = NAVE_MAP;
+    var s = Math.min(w / (M.w + 200), h / (M.h + 150));
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#0b1026'; ctx.fillRect(0, 0, w, h);
-    ctx.setTransform(s, 0, 0, s, (w - 1000 * s) / 2, (h - 600 * s) / 2 + 20 * s);
+    ctx.setTransform(s, 0, 0, s, (w - M.w * s) / 2, (h - M.h * s) / 2 + 30 * s);
     DRAW.ship(ctx, { labels: true, t: time, tr: t, lightsOut: game.lightsOut });
     if (game.lightsOut) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
