@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Sneaky One</title>
-<link rel="stylesheet" href="css/estilo.css?v=19">
+<link rel="stylesheet" href="css/estilo.css?v=20">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icono2-192.png">
 <link rel="apple-touch-icon" href="icons/icono2-apple-180.png">
@@ -16,10 +16,13 @@
   <div class="logo" id="logo" aria-label="The Sneaky One"></div>
   <div class="tagline" data-i18n="app.subtitle"></div>
   <div class="menu">
-    <a class="mbtn green" id="toSolo" href="movil.html?crear=1" style="--d:0.15s">
+    <a class="mbtn green" id="toSolo" href="movil.html?solo=1" style="--d:0.15s">
       <span class="mico">🎮</span><span class="mtxt"><b data-i18n="home.solo"></b><small data-i18n="home.soloHint"></small></span><span class="marrow">›</span>
     </a>
-    <a class="mbtn blue" id="toPhone" href="movil.html" style="--d:0.3s">
+    <a class="mbtn orange" id="toFamily" href="movil.html?crear=1" style="--d:0.25s">
+      <span class="mico">👨‍👩‍👧</span><span class="mtxt"><b data-i18n="home.family"></b><small data-i18n="home.familyHint"></small></span><span class="marrow">›</span>
+    </a>
+    <a class="mbtn blue" id="toPhone" href="movil.html" style="--d:0.35s">
       <span class="mico">📱</span><span class="mtxt"><b data-i18n="home.phone"></b><small data-i18n="home.phoneHint"></small></span><span class="marrow">›</span>
     </a>
     <a class="mbtn pink" id="toTv" href="tele.html" style="--d:0.45s">
@@ -33,17 +36,17 @@
   </div>
   <div class="muted small hidden" id="installHelp" data-i18n="app.installHelp" style="max-width:420px"></div>
   <div class="muted small hidden" id="shareMsg" style="max-width:420px"></div>
-  <div class="ver">v19</div>
+  <div class="ver">v20</div>
 </div>
-<script src="js/personajes-data.js?v=19"></script>
-<script src="js/fondo.js?v=19"></script>
-<script src="js/i18n.js?v=19"></script>
+<script src="js/personajes-data.js?v=20"></script>
+<script src="js/fondo.js?v=20"></script>
+<script src="js/i18n.js?v=20"></script>
 <script>
   (function () {
     var q = location.search;
     // Si llega con código (QR), ir directo al móvil
     if (/[?&]sala=/.test(q)) { location.replace('movil.html' + q); return; }
-    if (q) { document.getElementById('toTv').href += q; document.getElementById('toPhone').href += q; document.getElementById('toSolo').href += '&' + q.slice(1); }
+    if (q) { document.getElementById('toTv').href += q; document.getElementById('toPhone').href += q; document.getElementById('toSolo').href += '&' + q.slice(1); document.getElementById('toFamily').href += '&' + q.slice(1); }
     // Título con letras sueltas: rebotan al entrar y de vez en cuando una «se esconde» (como el impostor)
     function logo() {
       var el = document.getElementById('logo'), txt = t('app.title'), i = 0; el.innerHTML = '';

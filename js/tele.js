@@ -153,6 +153,12 @@
     cv.width = window.innerWidth * dpr; cv.height = window.innerHeight * dpr;
   }
   window.addEventListener('resize', function () { resize(); if (game.phase === 'lobby') renderLobby(); });
+  // Cuenta atrás de la sala (la pone el anfitrión desde su móvil)
+  setInterval(function () {
+    var el = $('tvAuto'), left = game.phase === 'lobby' && game.autoStartAt ? Math.max(0, Math.ceil((game.autoStartAt - Date.now()) / 1000)) : 0;
+    el.classList.toggle('hidden', !left);
+    if (left) el.textContent = t('ph.autoLeft', { t: Math.floor(left / 60) + ':' + ('0' + (left % 60)).slice(-2) });
+  }, 500);
   resize();
   function drawMap(time) {
     var w = cv.width, h = cv.height;

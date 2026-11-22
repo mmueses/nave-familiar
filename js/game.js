@@ -178,6 +178,7 @@
   G.start = function () {
     if (this.phase !== 'lobby') return false;
     this.purgeLobby(0);
+    this.autoStartAt = 0; this.autoMins = 0;
     var humans = this.humans();
     if (!humans.length) return false;
     var self = this;
@@ -995,6 +996,7 @@
     var p = this.players[pid];
     var self = this;
     var s = { t: 's', ph: this.phase, lang: root.I18N ? root.I18N.lang : 'es', map: this.phase === 'lobby' ? this.settings.map : (this.playMap || MAP.id) };
+    if (this.phase === 'lobby') { s.autoMins = this.autoMins || 0; s.autoLeft = this.autoStartAt ? Math.max(0, Math.ceil((this.autoStartAt - Date.now()) / 1000)) : 0; }
     s.host = this.hostPid();
     if (this.phase === 'lobby' || !p || !p.role) {
       s.ph = this.phase === 'lobby' ? 'lobby' : 'spectator';

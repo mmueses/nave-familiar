@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0b1026">
 <title>The Sneaky One · Móvil</title>
-<link rel="stylesheet" href="css/estilo.css?v=19">
+<link rel="stylesheet" href="css/estilo.css?v=20">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icono2-192.png">
 <link rel="apple-touch-icon" href="icons/icono2-apple-180.png">
@@ -32,13 +32,17 @@
 
 <div id="sLobby" class="screen hidden scroll" style="gap:14px">
   <div class="roomBox hidden" id="roomBox">
+    <h2 class="roomTitle" data-i18n="ph.familyTitle"></h2>
     <div class="muted" data-i18n="ph.roomCode"></div>
     <div class="roomCode" id="roomCode">····</div>
-    <div class="qr" id="roomQr"></div>
     <div id="roomStatus" class="roomStatus"></div>
+    <button class="sec hidden" id="btnRetry" data-i18n="ph.retry"></button>
     <div class="muted small" data-i18n="ph.roomHow"></div>
+    <div class="qr" id="roomQr"></div>
     <div class="muted small" data-i18n="ph.hostKeep"></div>
+    <div class="muted small" id="roomVias"></div>
   </div>
+  <div class="autoBox hidden" id="autoBox"></div>
   <div class="muted" data-i18n="ph.youAre"></div>
   <div id="meAvatar"></div>
   <h2 id="meName" style="margin:0"></h2>
@@ -46,6 +50,7 @@
   <div class="meLevel" id="meLevel"><span id="meLevelTxt"></span><div class="xpbar"><div id="meXp"></div></div></div>
   <div class="swatches" id="sw2" style="width:min(420px,94vw)"></div>
   <div class="muted" id="waitingTxt" data-i18n="ph.waiting"></div>
+  <div class="inRoom" id="inRoom"></div>
   <div class="plist" id="lobbyList"></div>
   <div id="hostBox" class="hidden glass" style="display:flex;flex-direction:column;gap:12px;align-items:center">
     <div class="muted" id="hostHint" data-i18n="ph.hostHint"></div>
@@ -55,6 +60,7 @@
     <div class="row"><span data-i18n="tv.map"></span><div class="seg" id="pMap"><button data-v="nave" data-i18n="map.nave"></button><button data-v="abisal" data-i18n="map.abisal"></button></div></div>
     <button class="sec" id="btnSettings" data-i18n="set.open"></button>
     <div class="row"><span data-i18n="lang.label"></span><div class="seg" id="pLang"><button data-v="es">ES</button><button data-v="en">EN</button></div></div>
+    <div class="row autoRow" id="autoRow"><span data-i18n="ph.auto"></span><div class="seg" id="pAuto"><button data-v="0" data-i18n="ph.autoOff"></button><button data-v="5" data-i18n="ph.auto5"></button><button data-v="10" data-i18n="ph.auto10"></button></div></div>
     <button class="big" id="btnStart" data-i18n="ph.startHere"></button>
   </div>
 </div>
@@ -168,23 +174,24 @@
   <canvas class="minimap" id="admCv"></canvas>
 </div>
 
-<script src="vendor/peerjs.min.js?v=19"></script>
-<script src="js/i18n.js?v=19"></script>
-<script src="js/map.js?v=19"></script>
-<script src="js/game.js?v=19"></script>
-<script src="js/personajes-data.js?v=19"></script>
-<script src="js/fondo.js?v=19"></script>
-<script src="js/efectos.js?v=19"></script>
-<script src="js/disfraces.js?v=19"></script>
-<script src="js/draw.js?v=19"></script>
-<script src="js/nave.js?v=19"></script>
-<script src="js/abisal.js?v=19"></script>
-<script src="js/net.js?v=19"></script>
-<script src="vendor/qrcode.js?v=19"></script>
-<script src="js/servidor.js?v=19"></script>
-<script src="js/ajustes.js?v=19"></script>
-<script src="js/minijuegos.js?v=19"></script>
-<script src="js/movil.js?v=19"></script>
+<script src="vendor/peerjs.min.js?v=20"></script>
+<script src="vendor/trystero.min.js?v=20"></script>
+<script src="js/i18n.js?v=20"></script>
+<script src="js/map.js?v=20"></script>
+<script src="js/game.js?v=20"></script>
+<script src="js/personajes-data.js?v=20"></script>
+<script src="js/fondo.js?v=20"></script>
+<script src="js/efectos.js?v=20"></script>
+<script src="js/disfraces.js?v=20"></script>
+<script src="js/draw.js?v=20"></script>
+<script src="js/nave.js?v=20"></script>
+<script src="js/abisal.js?v=20"></script>
+<script src="js/net.js?v=20"></script>
+<script src="vendor/qrcode.js?v=20"></script>
+<script src="js/servidor.js?v=20"></script>
+<script src="js/ajustes.js?v=20"></script>
+<script src="js/minijuegos.js?v=20"></script>
+<script src="js/movil.js?v=20"></script>
 <script>if ('serviceWorker' in navigator) { try { navigator.serviceWorker.register('sw.js'); } catch (e) {} }</script>
 </body>
 </html>

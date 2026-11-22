@@ -20,7 +20,8 @@
   var myColor = parseInt(store.get('nave.color'), 10);
   if (isNaN(myColor)) myColor = Math.floor(Math.random() * COLORS.length);
 
-  var SOLO = /[?&](solo|crear)=1/.test(location.search);   // este móvil crea la partida (y puede invitar a otros)
+  var SOLO = /[?&](solo|crear)=1/.test(location.search);   // este móvil lleva la partida
+  var OFFLINE = /[?&]solo=1/.test(location.search);         // «Jugar solo»: sin sala para otros (crear=1: partida familiar)
   var rejoining = false, lastAtSaved = 0;
   // Cuándo recibimos datos de una partida por última vez (con &tab=1, por pestaña, para las pruebas)
   var lastAt = {
@@ -172,13 +173,16 @@
     conn = { send: toServer, close: function () {} };
     joinedOnce = true;
     sendHello();
-    server.open(NET.makeCode());
+    if (!OFFLINE) server.open(NET.makeCode());
     window.__game = g; window.__server = server;
   }
   function renderRoom() {
-    if (!server) return;
+    if (!server || OFFLINE) return;
     $('roomBox').classList.remove('hidden');
-    var key = server.code + server.status + I18N.lang;
+    $('btnRetry').classList.toggle('hidden', server.status !== 'error');
+    var vs = server.net && server.net.vias ? Object.keys(server.net.vias).filter(function (k) { return server.net.vias[k] === 'ready'; }) : [];
+    $('roomVias').textContent = vs.length ? t('ph.roomVias', { v: vs.map(function (k) { return { peer: 'PeerJS', nostr: 'Nostr', torrent: 'WebTorrent' }[k] || k; }).join(' + ') }) : '';
+    var key = server.code + server.status + I18N.lang + vs.join();
     if (!changed('room', key)) return;
     $('roomCode').textContent = server.code || '····';
     var st = server.status;
@@ -209,6 +213,15 @@
   function renderLobby() {
     show('sLobby');
     renderRoom();
+    // cuenta atrás (la ven todos) y número de jugadores en la sala
+    var al = s.autoLeft || 0;
+    $('autoBox').classList.toggle('hidden', !al);
+    if (al) $('autoBox').textContent = t('ph.autoLeft', { t: Math.floor(al / 60) + ':' + ('0' + (al % 60)).slice(-2) });
+    seg('pAuto', String(s.autoMins || 0));
+    $('autoRow').classList.toggle('hidden', OFFLINE);
+    var nOn = (s.players || []).filter(function (p) { return p.on !== false; }).length;
+    $('inRoom').textContent = OFFLINE ? '' : t('ph.inRoom', { n: nOn });
+    $('btnStart').textContent = !OFFLINE && SOLO ? t('ph.startNow') : t('ph.startHere');
     var me = s.me || { n: '', c: myColor };
     if (changed('lobby', JSON.stringify([s.players, s.host, s.settings, me, I18N.lang]))) {
       myColor = me.c;
@@ -254,6 +267,13 @@
   bindSeg('pLang', function (v) { send({ t: 'set', s: {}, lang: v }); });
   bindSeg('pBot', function (v) { send({ t: 'set', s: { botLevel: v } }); });
   bindSeg('pMap', function (v) { send({ t: 'set', s: { map: v } }); });
+  bindSeg('pAuto', function (v) { send({ t: 'auto', m: +v }); });
+  $('btnRetry').onclick = function () {
+    if (!server) return;
+    try { server.net && server.net.stop(); } catch (e) {}
+    server.open(server.code || NET.makeCode());
+    uiKey.room = null; renderRoom();
+  };
   var refreshSettings = AJUSTES.build($('setPanel'), function () { return (s && s.settings) || NaveGame.defaultSettings(); }, function (ch) { send({ t: 'set', s: ch }); });
   // Armario: elegir sombrero, disfraz y efecto (se desbloquean por nivel)
   var lookTab = 'ch';

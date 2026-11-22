@@ -25,6 +25,11 @@
       if (now - lastSend >= 90) { lastSend = now; self.sendAll(); }
       self.conns.slice().forEach(function (c) { if (!c.local && ms - c.last > 15000) { c.w.close(); self.drop(c); } });
       if (game.purgeLobby(20000)) self.onChange();
+      // Cuenta atrás de la sala: al llegar a cero empieza la partida con los que estén
+      if (game.phase === 'lobby' && game.autoStartAt && ms >= game.autoStartAt) {
+        game.autoStartAt = 0;
+        if (game.start()) self.onStart();
+      }
     }, 40);
   }
   var P = NaveServer.prototype;
@@ -106,7 +111,15 @@
         if (pid && pid === game.hostPid()) { game.setSettings(m.s); if (m.lang) this.onLang(m.lang); this.onChange(); }
         break;
       case 'start':
-        if (pid && pid === game.hostPid() && game.start()) this.onStart();
+        if (pid && pid === game.hostPid() && game.start()) { game.autoStartAt = 0; this.onStart(); }
+        break;
+      case 'auto':   // cuenta atrás: m minutos (0 = sin cuenta atrás)
+        if (pid && pid === game.hostPid() && game.phase === 'lobby') {
+          var mins = [0, 5, 10].indexOf(+m.m) >= 0 ? +m.m : 0;
+          game.autoStartAt = mins ? Date.now() + mins * 60000 : 0;
+          game.autoMins = mins;
+          this.onChange();
+        }
         break;
       case 'lobby':
         if (pid && pid === game.hostPid() && game.phase === 'end') game.backToLobby();
