@@ -667,6 +667,17 @@
   // opts: { t, highlight: [ids], lightsOut, reactor, tr, res: píxeles por unidad del mundo }
   function draw(ctx, opts) {
     opts = opts || {};
+    var K = MAP.scale || 1;
+    if (K !== 1) {
+      var o2 = {}; for (var q in opts) o2[q] = opts[q];
+      o2.res = (opts.res || 1) * K;
+      ctx.save(); ctx.scale(K, K);
+      try { MAP.withBase(function () { drawBase(ctx, o2); }); } finally { ctx.restore(); }
+      return;
+    }
+    drawBase(ctx, opts);
+  }
+  function drawBase(ctx, opts) {
     var t = opts.t || 0;
     var res = opts.res || 1;
     var k = Math.max(0.5, Math.min(2.5, Math.ceil(res * 2) / 2));

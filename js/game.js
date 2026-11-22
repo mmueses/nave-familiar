@@ -13,9 +13,9 @@
   var BOT_NAMES = ['Robi', 'Luna', 'Chispa', 'Nube', 'Pixel', 'Cometa', 'Tornillo', 'Estrella', 'Bolita', 'Rayo', 'Lupa', 'Trueno'];
 
   var CFG = {
-    speed: 190, radius: 10,
-    useRange: 48, freezeRange: 55, reportRange: 85, ventRange: 42,
-    vision: 190, visionDark: 80, impVision: 230, ghostVision: 300, camRange: 300,
+    speed: 215, radius: 10,
+    useRange: 54, freezeRange: 55, reportRange: 95, ventRange: 48,
+    vision: 205, visionDark: 90, impVision: 230, ghostVision: 340, camRange: 390,
     freezeCd: 25, freezeCdStart: 15, sabCd: 40, sabCdStart: 20, meetingCdStart: 12,
     reactorTime: 45,
     splashTime: 2.5, discussTime: 30, voteTime: 35, ejectTime: 8, introTime: 6,
@@ -280,7 +280,7 @@
   G.isBotNow = function (p) { return p.bot || (!p.connected && p.role === 'crew' && this.now - p.discAt > CFG.botTakeover); };
   G.visionOf = function (p) {
     if (this.isGhost(p)) return CFG.ghostVision;
-    if (p.role === 'imp') return 185 * this.settings.impVision;
+    if (p.role === 'imp') return 200 * this.settings.impVision;
     return (this.lightsOut ? CFG.visionDark : CFG.vision) * this.settings.crewVision;
   };
   // ¿p puede ver el punto q? (distancia + sin paredes en medio; los fantasmas ven a través de las paredes)

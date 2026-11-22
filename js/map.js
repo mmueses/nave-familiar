@@ -308,14 +308,42 @@
   };
 
   // Cambia de mapa. Todos los archivos usan el mismo objeto MAP, así que basta con rellenarlo.
+  // Los mapas se diseñan a escala 1 ("base") y se agrandan al usarlos (SCALE). El dibujo se hace en coordenadas base
+  // con el lienzo agrandado (MAP.withBase), así que todo se ve igual pero más grande que los personajes.
+  var SCALE = { nave: 1.3, abisal: 1.3 };
+  function sc(v, k) { return Math.round(v * k); }
+  function scaleDef(d, k) {
+    function R(r) { var o = {}; for (var q in r) o[q] = r[q]; o.x = sc(r.x, k); o.y = sc(r.y, k); if (r.w != null) { o.w = sc(r.w, k); o.h = sc(r.h, k); } return o; }
+    var nodes = {}; for (var n in d.nodes) nodes[n] = [sc(d.nodes[n][0], k), sc(d.nodes[n][1], k)];
+    return {
+      id: d.id, name: d.name, w: sc(d.w, k), h: sc(d.h, k), wallFace: sc(d.wallFace, k),
+      rooms: d.rooms.map(R), corridors: d.corridors.map(R), stations: d.stations.map(R), vents: d.vents.map(R),
+      cameras: d.cameras.map(R), holes: (d.holes || []).map(R), labels: d.labels,
+      spawn: { x: sc(d.spawn.x, k), y: sc(d.spawn.y, k), r: sc(d.spawn.r, k) }, nodes: nodes, edges: d.edges
+    };
+  }
+  var FIELDS = ['id', 'name', 'w', 'h', 'wallFace', 'rooms', 'corridors', 'stations', 'vents', 'cameras', 'labels', 'spawn', 'nodes', 'edges', 'holes'];
+  function load(src) {
+    FIELDS.forEach(function (k) { MAP[k] = src[k]; });
+    MAP.holes = src.holes || [];
+    MAP.rects = MAP.rooms.concat(MAP.corridors);
+  }
+  var SCALED = {};
   MAP.use = function (id) {
     var d = DEFS[id] || DEF_NAVE;
     if (MAP.id === d.id) return false;
-    ['id', 'name', 'w', 'h', 'wallFace', 'rooms', 'corridors', 'stations', 'vents', 'cameras', 'labels', 'spawn', 'nodes', 'edges'].forEach(function (k) { MAP[k] = d[k]; });
-    MAP.holes = d.holes || [];
-    MAP.rects = MAP.rooms.concat(MAP.corridors);
+    MAP.scale = SCALE[d.id] || 1;
+    MAP.base = d;
+    load(SCALED[d.id] || (SCALED[d.id] = scaleDef(d, MAP.scale)));
     GW = Math.ceil(MAP.w / CELL) + 2; GH = Math.ceil(MAP.h / CELL) + 2; GRID = null;
     return true;
+  };
+  // Dibuja con la geometría base (sin agrandar). El que llama ya ha escalado el lienzo por MAP.scale.
+  MAP.withBase = function (fn) {
+    var cur = SCALED[MAP.id], k = MAP.scale;
+    if (k === 1 || !cur) return fn();
+    load(MAP.base); MAP.scale = 1;
+    try { return fn(); } finally { load(cur); MAP.scale = k; }
   };
   MAP.use('nave');
 

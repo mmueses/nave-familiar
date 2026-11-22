@@ -604,7 +604,7 @@
     if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
     var x = c.getContext('2d');
     x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
-    var sc = Math.min(c.width / 560, c.height / 420);
+    var sc = Math.min(c.width / 680, c.height / 510);
     x.setTransform(sc, 0, 0, sc, c.width / 2 - cam.x * sc, c.height / 2 - cam.y * sc);
     DRAW.ship(x, { t: time, tr: t, lightsOut: !!s.dark, reactor: !!s.reactor, res: sc });
     var feed = (s.cams && s.cams[camIdx]) || { p: [], b: [] };
@@ -612,7 +612,7 @@
     feed.p.forEach(function (p) { DRAW.character(x, p[0], p[1], hexOf(p[2]), { look: p[3], t: time, name: p[4] }); });
     // fuera del alcance de la cámara: más oscuro
     x.save(); x.beginPath(); x.rect(cam.x - 2000, cam.y - 2000, 4000, 4000);
-    var poly = DRAW.visibility(cam.x, cam.y, 300, 160);
+    var poly = DRAW.visibility(cam.x, cam.y, 390, 160);
     x.moveTo(poly[0], poly[1]); for (var i = 2; i < poly.length; i += 2) x.lineTo(poly[i], poly[i + 1]); x.closePath();
     x.fillStyle = 'rgba(0,0,0,0.55)'; x.fill('evenodd'); x.restore();
     x.setTransform(1, 0, 0, 1, 0, 0);
