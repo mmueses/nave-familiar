@@ -85,7 +85,7 @@
     rejoining = false;
     store.set('nave.code', c);
     code = c; stopRetry = false; joinedOnce = false;
-    $('joinErr').textContent = '';
+    $('joinErr').textContent = ''; $('joinDiag').innerHTML = ''; $('waitDiag').innerHTML = '';
     connect(true);
   };
 
@@ -109,6 +109,7 @@
     wait(first ? t('ph.connecting') : t('ph.lost'));
     NET.join(code, {
       onStatus: function (st) { wait(st === 'server' ? t('ph.stServer') : t('ph.stRoom', { code: code })); },
+      onDiag: function (d) { lastDiag = d; $('waitDiag').innerHTML = diagHtml(d); },
       onOpen: function (w) {
         connecting = false;
         conn = w; lastData = Date.now();
@@ -116,8 +117,9 @@
         w.onClose = function () { if (conn === w) { conn = null; scheduleRetry(); } };
         sendHello();
       },
-      onError: function (e) {
+      onError: function (e, d) {
         connecting = false;
+        $('joinDiag').innerHTML = d ? diagHtml(d) : '';
         if (rejoining && !joinedOnce) {   // la partida de antes ya no existe: pantalla de entrar normal, sin error
           rejoining = false; code = null; lastAt.set('0'); show('sJoin'); return;
         }
@@ -127,6 +129,14 @@
         } else scheduleRetry();
       }
     });
+  }
+  // Una línea por camino de conexión, para saber qué falla
+  var lastDiag = null;
+  function diagHtml(d) {
+    var names = { peer: 'PeerJS', nostr: 'Nostr', torrent: 'WebTorrent', mqtt: t('diag.mqtt') };
+    return Object.keys(d).map(function (k) {
+      return '<div><b>' + names[k] + ':</b> ' + t('diag.' + d[k]) + '</div>';
+    }).join('');
   }
   function scheduleRetry() {
     if (stopRetry || retryTimer || SOLO) return;
@@ -181,7 +191,7 @@
     $('roomBox').classList.remove('hidden');
     $('btnRetry').classList.toggle('hidden', server.status !== 'error');
     var vs = server.net && server.net.vias ? Object.keys(server.net.vias).filter(function (k) { return server.net.vias[k] === 'ready'; }) : [];
-    $('roomVias').textContent = vs.length ? t('ph.roomVias', { v: vs.map(function (k) { return { peer: 'PeerJS', nostr: 'Nostr', torrent: 'WebTorrent' }[k] || k; }).join(' + ') }) : '';
+    $('roomVias').textContent = vs.length ? t('ph.roomVias', { v: vs.map(function (k) { return { peer: 'PeerJS', nostr: 'Nostr', torrent: 'WebTorrent', mqtt: t('diag.mqtt') }[k] || k; }).join(' + ') }) : '';
     var key = server.code + server.status + I18N.lang + vs.join();
     if (!changed('room', key)) return;
     $('roomCode').textContent = server.code || '····';
@@ -881,6 +891,7 @@
 
   // ---------- Arranque ----------
   I18N.apply();
+  try { $('joinVer').textContent = (document.querySelector('script[src*="movil.js"]').src.match(/v=(\d+)/) || [])[1] ? 'v' + document.querySelector('script[src*="movil.js"]').src.match(/v=(\d+)/)[1] : ''; } catch (e) {}
   show('sJoin');
   var recent = Date.now() - (parseInt(lastAt.get(), 10) || 0) < 10 * 60 * 1000;
   var lastCode = store.get('nave.code');

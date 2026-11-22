@@ -209,11 +209,98 @@
     return { cancel: function () { if (done) return; done = true; clearInterval(poll); leave(); } };
   }
 
+
+  // ---------------- Rebote por MQTT (sin conexión directa) ----------------
+  function brokers() { var u = param('mqtturl'); return u ? u.split(',') : (root.REBOTE ? REBOTE.BROKERS : []); }
+  function mqttHost(code, h) {
+    if (!root.REBOTE || !root.crypto || !crypto.subtle) { setTimeout(function () { h.onError('server'); }, 10); return { stop: function () {} }; }
+    var stopped = false, clis = [], peers = {}, K = null, ready = false, fails = 0;
+    function status() {
+      var any = clis.some(function (c) { return c.ok; });
+      if (any && !ready) { ready = true; h.onReady(code); }
+      else if (!any && ready) { ready = false; h.onLost && h.onLost(); }
+    }
+    function connect(url) {
+      if (stopped) return;
+      var cli = new REBOTE.Client(url, {
+        open: function () { cli.sub(K.base + '/h'); status(); },
+        msg: function (topic, bytes) {
+          REBOTE.open(K.key, bytes).then(function (m) {
+            if (!m || typeof m.from !== 'string') return;
+            var cid = m.from.slice(0, 20), p = peers[cid];
+            if (m.k === 'join') {
+              if (p && !p.w.closed && p.cli !== cli) return;    // ya entró por otro servidor
+              if (!p || p.w.closed) {
+                var send = REBOTE.Sender(cli, K.base + '/c/' + cid, K.key);
+                var w = Wrap(function (o) { send({ k: 'd', d: o }); }, function () { send({ k: 'bye' }); delete peers[cid]; });
+                p = peers[cid] = { w: w, cli: cli, send: send };
+                h.onConn(w);
+              }
+              p.send({ k: 'host' });
+            } else if (p && p.cli === cli) {
+              if (m.k === 'd') p.w._data(m.d);
+              else if (m.k === 'bye') { p.w._closed(); delete peers[cid]; }
+            }
+          }).catch(function () {});
+        },
+        close: function () {
+          clis = clis.filter(function (c) { return c !== cli; }); status();
+          for (var id in peers) if (peers[id].cli === cli) { peers[id].w._closed(); delete peers[id]; }
+          if (!stopped) { if (++fails >= brokers().length && !ready) h.onError('server'); setTimeout(function () { connect(url); }, 5000); }
+        }
+      });
+      clis.push(cli);
+    }
+    REBOTE.keys(APP, code).then(function (k) { K = k; brokers().forEach(connect); }).catch(function () { h.onError('server'); });
+    return { stop: function () { stopped = true; clis.slice().forEach(function (c) { c.close(); }); } };
+  }
+  function mqttJoin(code, h) {
+    if (!root.REBOTE || !root.crypto || !crypto.subtle) { setTimeout(function () { h.onError('server'); }, 10); return { cancel: function () {} }; }
+    var cid = 'c' + Math.random().toString(36).slice(2, 12), clis = [], K = null, done = false, w = null, chosen = null, timer = null, gone = 0;
+    function closeOthers() { clis.forEach(function (c) { if (c !== chosen) c.close(); }); }
+    REBOTE.keys(APP, code).then(function (k) {
+      K = k;
+      brokers().forEach(function (url) {
+        var send = null;
+        var cli = new REBOTE.Client(url, {
+          open: function () {
+            cli.sub(K.base + '/c/' + cid);
+            send = REBOTE.Sender(cli, K.base + '/h', K.key);
+            cli.send = send;
+            h.onDiag && h.onDiag('srvOk');
+            if (!done) send({ from: cid, k: 'join' });
+          },
+          msg: function (topic, bytes) {
+            REBOTE.open(K.key, bytes).then(function (m) {
+              if (!m) return;
+              if (m.k === 'host' && !done) {
+                done = true; chosen = cli; clearInterval(timer); closeOthers();
+                w = Wrap(function (o) { send({ from: cid, k: 'd', d: o }); }, function () { send({ from: cid, k: 'bye' }); setTimeout(function () { cli.close(); }, 300); });
+                h.onOpen(w);
+              } else if (cli === chosen && w) {
+                if (m.k === 'd') w._data(m.d);
+                else if (m.k === 'bye') { w._closed(); cli.close(); }
+              }
+            }).catch(function () {});
+          },
+          close: function () {
+            if (cli === chosen && w) w._closed();
+            if (!done && ++gone >= brokers().length) h.onError('server');
+          }
+        });
+        clis.push(cli);
+      });
+      // insistimos con «quiero entrar» por si el anfitrión aún no estaba escuchando
+      timer = setInterval(function () { if (done) return; clis.forEach(function (c) { if (c.ok && c.send) c.send({ from: cid, k: 'join' }); }); }, 1500);
+    }).catch(function () { h.onError('server'); });
+    return { cancel: function () { if (done) return; done = true; clearInterval(timer); clis.forEach(function (c) { c.close(); }); } };
+  }
+
   // ---------------- Todos los caminos a la vez ----------------
   // ?via=peer,nostr,torrent para elegir caminos (pruebas). Por defecto, los tres.
   function vias() {
     var v = param('via');
-    return v ? v.split(',') : ['peer', 'nostr', 'torrent'];
+    return v ? v.split(',') : ['peer', 'nostr', 'torrent', 'mqtt'];
   }
   function host(code, h) {
     if (LOCAL) return hostLocal(code, h);
@@ -235,39 +322,56 @@
         },
         onConn: function (w) { h.onConn(w); }
       };
-      nets.push(k === 'peer' ? peerHost(code, hh) : tryHost(k, code, hh));
+      nets.push(k === 'peer' ? peerHost(code, hh) : k === 'mqtt' ? mqttHost(code, hh) : tryHost(k, code, hh));
     });
     return { code: code, vias: st, stop: function () { stopped = true; nets.forEach(function (n) { n.stop(); }); } };
   }
+  // Diagnóstico por camino: srv (buscando servidores) · srvOk (servidores bien, buscando la sala) · ok
+  //   noRoom (la sala no existe) · noDirect (sala encontrada, sin conexión directa) · noHost (sin respuesta del anfitrión) · noSrv
   function join(code, h) {
     if (LOCAL) return joinLocal(code, h);
-    var list = vias(), errs = {}, tries = [], done = false, saidRoom = false;
+    var list = vias(), errs = {}, tries = {}, done = false, saidRoom = false, diag = {};
+    list.forEach(function (k) { diag[k] = 'srv'; });
+    function setDiag(k, v) { if (diag[k] === 'ok') return; diag[k] = v; h.onDiag && h.onDiag(diag); }
     h.onStatus && h.onStatus('server');
-    var timer = setTimeout(function () { finish(errs.peer === 'notfound' || saidRoom ? 'notfound' : 'server'); }, 22000);
+    h.onDiag && h.onDiag(diag);
+    var timer = setTimeout(function () {
+      list.forEach(function (k) { if (diag[k] === 'srvOk' || diag[k] === 'srv') setDiag(k, diag[k] === 'srvOk' ? 'noHost' : 'noSrv'); });
+      finish(errs.peer === 'blocked' ? 'blocked' : (errs.peer === 'notfound' || saidRoom ? 'notfound' : 'server'));
+    }, 25000);
     function finish(type) {
-      if (done) return; done = true; clearTimeout(timer);
-      tries.forEach(function (t) { t.cancel(); });
-      h.onError(type);
+      if (done) return; done = true; clearTimeout(timer); clearTimeout(mqttLater);
+      for (var k in tries) tries[k].cancel();
+      h.onError(type, diag);
     }
-    list.forEach(function (k) {
+    function start(k) {
+      if (done || tries[k]) return;
       var hh = {
-        onStatus: function (s) { if (s === 'room' && !saidRoom) { saidRoom = true; h.onStatus && h.onStatus('room'); } },
+        onStatus: function (st) {
+          if (st === 'room') { setDiag(k, 'srvOk'); if (!saidRoom) { saidRoom = true; h.onStatus && h.onStatus('room'); } }
+        },
+        onDiag: function (v) { if (v === 'srvOk' && !saidRoom) { saidRoom = true; h.onStatus && h.onStatus('room'); } setDiag(k, v); },
         onOpen: function (w) {
           if (done) { w.close(); return; }
-          done = true; clearTimeout(timer);
-          tries.forEach(function (t) { if (t !== me) t.cancel(); });
+          done = true; clearTimeout(timer); clearTimeout(mqttLater);
+          diag[k] = 'ok';
+          for (var x in tries) if (x !== k) tries[x].cancel();
+          h.onVia && h.onVia(k);
           h.onOpen(w);
         },
         onError: function (type) {
           errs[k] = type;
+          setDiag(k, type === 'notfound' ? 'noRoom' : type === 'blocked' ? 'noDirect' : 'noSrv');
           if (done) return;
-          // PeerJS contesta rápido «no existe», pero los otros caminos aún pueden encontrar la sala: esperamos
-          if (list.every(function (x) { return errs[x]; })) finish(errs.peer || type);
+          // un camino que falla no basta: los otros aún pueden encontrar la sala
+          if (list.every(function (x) { return errs[x]; })) finish(errs.peer === 'blocked' ? 'blocked' : (errs.peer || type));
         }
       };
-      var me = k === 'peer' ? peerJoin(code, hh) : tryJoin(k, code, hh);
-      tries.push(me);
-    });
+      tries[k] = k === 'peer' ? peerJoin(code, hh) : k === 'mqtt' ? mqttJoin(code, hh) : tryJoin(k, code, hh);
+    }
+    // los caminos directos primero; el rebote (más lento en partida) solo si a los 4 s no ha conectado ninguno
+    list.forEach(function (k) { if (k !== 'mqtt') start(k); });
+    var mqttLater = list.indexOf('mqtt') >= 0 ? setTimeout(function () { start('mqtt'); }, list.length === 1 ? 0 : 4000) : 0;
   }
 
   function joinLocal(code, h) {
