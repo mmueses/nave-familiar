@@ -1,6 +1,6 @@
 {
-  "name": "Nave Familiar",
-  "short_name": "Nave Familiar",
+  "name": "The Sneaky One",
+  "short_name": "The Sneaky One",
   "description": "Juego de impostores para jugar en familia",
   "start_url": "./index.html?app=1",
   "scope": "./",
