@@ -317,7 +317,9 @@
         onLost: function () { st[k] = 'lost'; recompute(); },
         onError: function (type) {
           if (stopped) return;
-          if (type === 'taken') { stopped = true; nets.forEach(function (n) { n.stop(); }); h.onError('taken'); return; }
+          // «código ocupado» en PeerJS: suele ser la sala anterior de este mismo móvil, que aún no ha caducado.
+          // Si hay más caminos, seguimos con el mismo código por ellos (así los demás se reconectan solos).
+          if (type === 'taken' && list.length === 1) { stopped = true; nets.forEach(function (n) { n.stop(); }); h.onError('taken'); return; }
           st[k] = 'error'; recompute();
         },
         onConn: function (w) { h.onConn(w); }
@@ -372,10 +374,12 @@
     // los caminos directos primero; el rebote (más lento en partida) solo si a los 4 s no ha conectado ninguno
     list.forEach(function (k) { if (k !== 'mqtt') start(k); });
     var mqttLater = list.indexOf('mqtt') >= 0 ? setTimeout(function () { start('mqtt'); }, list.length === 1 ? 0 : 4000) : 0;
+    // cancelar (botón «Salir»): se cierra todo y no se avisa de nada
+    return { cancel: function () { if (done) return; done = true; clearTimeout(timer); clearTimeout(mqttLater); for (var k in tries) tries[k].cancel(); } };
   }
 
   function joinLocal(code, h) {
-    var ch = new BroadcastChannel('nave-' + code);
+    var ch = new BroadcastChannel('nave-' + code), cancelled = false;
     var id = 'c' + Math.random().toString(36).slice(2, 9);
     var w = null;
     h.onStatus && h.onStatus('room');
@@ -392,6 +396,7 @@
       else if (m.k === 'bye' && w) { w._closed(); ch.close(); }
     };
     ch.postMessage({ k: 'hello', from: id, to: 'host' });
+    return { cancel: function () { cancelled = true; clearTimeout(tm); try { ch.close(); } catch (e) {} } };
   }
 
   root.NET = { host: host, join: join, makeCode: makeCode, cleanCode: cleanCode, local: LOCAL, testParams: testParams };

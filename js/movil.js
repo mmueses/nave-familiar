@@ -103,14 +103,17 @@
     return l;
   }
   function send(o) { if (conn) conn.send(o); }
+  var joinTry = null, joinGen = 0;
   function connect(first) {
     if (connecting) return;
     connecting = true;
+    var gen = ++joinGen;
     wait(first ? t('ph.connecting') : t('ph.lost'));
-    NET.join(code, {
+    joinTry = NET.join(code, {
       onStatus: function (st) { wait(st === 'server' ? t('ph.stServer') : t('ph.stRoom', { code: code })); },
       onDiag: function (d) { lastDiag = d; $('waitDiag').innerHTML = diagHtml(d); },
       onOpen: function (w) {
+        if (gen !== joinGen) { w.close(); return; }   // ya se pulsó «Salir»
         connecting = false;
         conn = w; lastData = Date.now();
         w.onData = onData;
@@ -118,6 +121,7 @@
         sendHello();
       },
       onError: function (e, d) {
+        if (gen !== joinGen) return;
         connecting = false;
         $('joinDiag').innerHTML = d ? diagHtml(d) : '';
         if (rejoining && !joinedOnce) {   // la partida de antes ya no existe: pantalla de entrar normal, sin error
@@ -130,6 +134,21 @@
       }
     });
   }
+  // «Salir y poner otro código»: deja de intentar entrar en la partida de antes
+  function leaveRoom() {
+    joinGen++; stopRetry = true; connecting = false;
+    clearTimeout(retryTimer); retryTimer = null;
+    try { joinTry && joinTry.cancel && joinTry.cancel(); } catch (e) {}
+    var c = conn; conn = null; if (c) try { c.close(); } catch (e) {}
+    lastAt.set('0'); try { sessionStorage.removeItem('nave.joined'); } catch (e) {}
+    code = null; joinedOnce = false; rejoining = false; s = null; uiKey = {};
+    $('code').value = ''; $('joinErr').textContent = ''; $('joinDiag').innerHTML = '';
+    $('btnRejoin').classList.add('hidden');
+    show('sJoin');
+    setTimeout(function () { try { $('code').focus(); } catch (e) {} }, 50);
+  }
+  $('btnLeave').onclick = leaveRoom;
+  if (SOLO) $('btnLeave').classList.add('hidden');
   // Una línea por camino de conexión, para saber qué falla
   var lastDiag = null;
   function diagHtml(d) {
@@ -183,15 +202,31 @@
     conn = { send: toServer, close: function () {} };
     joinedOnce = true;
     sendHello();
-    if (!OFFLINE) server.open(NET.makeCode());
+    if (!OFFLINE) server.open(myHostCode());
     window.__game = g; window.__server = server;
   }
+  // El que crea la partida familiar conserva su código 12 h: si sale y vuelve a crearla, los demás se reconectan solos
+  function myHostCode() {
+    var c = store.get('nave.hostcode'), at = parseInt(store.get('nave.hostcodeAt'), 10) || 0;
+    if (!c || !/^[A-Z]{4}$/.test(c) || Date.now() - at > 12 * 3600 * 1000) c = NET.makeCode();
+    store.set('nave.hostcode', c); store.set('nave.hostcodeAt', String(Date.now()));
+    return c;
+  }
+  $('btnNewCode').onclick = function () {
+    if (!server) return;
+    var c = NET.makeCode();
+    store.set('nave.hostcode', c); store.set('nave.hostcodeAt', String(Date.now()));
+    try { server.net && server.net.stop(); } catch (e) {}
+    server.open(c);
+    uiKey.room = null; renderRoom();
+  };
   function renderRoom() {
     if (!server || OFFLINE) return;
     $('roomBox').classList.remove('hidden');
     $('btnRetry').classList.toggle('hidden', server.status !== 'error');
     var vs = server.net && server.net.vias ? Object.keys(server.net.vias).filter(function (k) { return server.net.vias[k] === 'ready'; }) : [];
     $('roomVias').textContent = vs.length ? t('ph.roomVias', { v: vs.map(function (k) { return { peer: 'PeerJS', nostr: 'Nostr', torrent: 'WebTorrent', mqtt: t('diag.mqtt') }[k] || k; }).join(' + ') }) : '';
+    if (server.code && /^[A-Z]{4}$/.test(server.code)) store.set('nave.hostcode', server.code);
     var key = server.code + server.status + I18N.lang + vs.join();
     if (!changed('room', key)) return;
     $('roomCode').textContent = server.code || '····';
@@ -897,9 +932,21 @@
   var lastCode = store.get('nave.code');
   if (!SOLO && store.get('nave.name') && lastCode && (q ? lastCode === q[1].toUpperCase() : true) &&
       ((q && sessionStorage.getItem('nave.joined') === lastCode) || recent)) {
-    // Estaba en una partida hace menos de 10 minutos: volvemos solos a ella con el mismo jugador
-    code = lastCode; rejoining = true; connect(true);
+    if (q || sessionStorage.getItem('nave.joined') === lastCode) {
+      // se recargó la página en mitad de la partida: volvemos solos con el mismo jugador
+      code = lastCode; rejoining = true; connect(true);
+    } else {
+      // partida reciente: no entramos solos (puede que quieras otro código); ofrecemos volver con un botón
+      $('btnRejoin').textContent = t('ph.rejoin', { code: lastCode });
+      $('btnRejoin').classList.remove('hidden');
+      $('code').value = '';
+    }
   }
+  $('btnRejoin').onclick = function () {
+    $('btnRejoin').classList.add('hidden');
+    $('code').value = lastCode;
+    $('btnJoin').click();
+  };
   window.addEventListener('beforeunload', function () { if (joinedOnce && code) try { sessionStorage.setItem('nave.joined', code); } catch (e) {} });
 
   window.__phone = { get s() { return s; }, send: send, get screen() { return screen; }, pid: pid, act: act };
