@@ -1,8 +1,9 @@
 /* Mapa de la nave: salas, pasillos, estaciones, rejillas de ventilación, cámaras y red de caminos de los bots.
    Coordenadas del "mundo": 1600 x 840. Pasillos de 80 de ancho. */
 (function (root) {
-  var MAP = {
+  var DEF_NAVE = {
     id: 'nave',
+    name: 'map.nave',
     w: 1600,
     h: 840,
     wallFace: 26,   // alto del "frente" de las paredes (solo dibujo)
@@ -97,10 +98,122 @@
     ]
   };
 
-  MAP.rects = MAP.rooms.concat(MAP.corridors);
+  // ---------- Segundo mapa: Base Abisal (base submarina con cúpula central y acuario) ----------
+  var DEF_ABISAL = {
+    id: 'abisal',
+    name: 'map.abisal',
+    w: 1640,
+    h: 880,
+    wallFace: 26,
+    rooms: [
+      { id: 'comms',    name: 'room.comms',    x: 360,  y: 60,  w: 160, h: 150 },
+      { id: 'cafe',     name: 'room.cafe',     x: 560,  y: 40,  w: 300, h: 200 },
+      { id: 'dorms',    name: 'room.dorms',    x: 900,  y: 60,  w: 190, h: 160 },
+      { id: 'oxygen',   name: 'room.oxygen',   x: 1130, y: 60,  w: 180, h: 160 },
+      { id: 'sonar',    name: 'room.sonar',    x: 340,  y: 240, w: 200, h: 140 },
+      { id: 'biolab',   name: 'room.biolab',   x: 40,   y: 330, w: 240, h: 220 },
+      { id: 'robotics', name: 'room.robotics', x: 340,  y: 520, w: 220, h: 160 },
+      { id: 'trench',   name: 'room.trench',   x: 40,   y: 640, w: 240, h: 190 },
+      { id: 'dome',     name: 'room.dome',     x: 640,  y: 300, w: 360, h: 300 },
+      { id: 'foundry',  name: 'room.foundry',  x: 1100, y: 240, w: 200, h: 140 },
+      { id: 'storage',  name: 'room.tools',    x: 1080, y: 520, w: 220, h: 160 },
+      { id: 'reactor',  name: 'room.geo',      x: 1360, y: 320, w: 240, h: 240 },
+      { id: 'pods',     name: 'room.pods',     x: 1360, y: 640, w: 220, h: 200 },
+      { id: 'security', name: 'room.emergency', x: 470, y: 720, w: 170, h: 130 },
+      { id: 'admin',    name: 'room.command',  x: 700,  y: 700, w: 240, h: 160 },
+      { id: 'electrical', name: 'room.electrical', x: 1000, y: 720, w: 180, h: 130 }
+    ],
+    // Huecos que no se pisan (el acuario en medio de la cúpula)
+    holes: [{ x: 720, y: 380, w: 200, h: 140 }],
+    corridors: [
+      { x: 280,  y: 410, w: 360, h: 80 },  // ala oeste
+      { x: 1000, y: 410, w: 360, h: 80 },  // ala este
+      { x: 760,  y: 240, w: 80,  h: 60 },  // comedor -> cúpula
+      { x: 780,  y: 600, w: 80,  h: 100 }, // cúpula -> mando
+      { x: 520,  y: 100, w: 40,  h: 80 },  // comedor -> comunicaciones
+      { x: 860,  y: 100, w: 40,  h: 80 },  // comedor -> dormitorios
+      { x: 1090, y: 100, w: 40,  h: 80 },  // dormitorios -> oxígeno
+      { x: 400,  y: 210, w: 80,  h: 30 },  // comunicaciones -> sónar
+      { x: 400,  y: 380, w: 80,  h: 30 },  // sónar -> ala oeste
+      { x: 420,  y: 490, w: 80,  h: 30 },  // ala oeste -> robótica
+      { x: 120,  y: 550, w: 80,  h: 90 },  // biología -> fosa
+      { x: 480,  y: 680, w: 80,  h: 40 },  // robótica -> emergencias
+      { x: 280,  y: 750, w: 190, h: 80 },  // fosa -> emergencias
+      { x: 640,  y: 750, w: 60,  h: 80 },  // emergencias -> mando
+      { x: 940,  y: 750, w: 60,  h: 80 },  // mando -> electricidad
+      { x: 1180, y: 220, w: 80,  h: 20 },  // oxígeno -> fundición
+      { x: 1160, y: 380, w: 80,  h: 30 },  // fundición -> ala este
+      { x: 1140, y: 490, w: 80,  h: 30 },  // ala este -> herramientas
+      { x: 1090, y: 680, w: 80,  h: 40 },  // herramientas -> electricidad
+      { x: 1440, y: 560, w: 80,  h: 80 },  // reactor -> cápsulas
+      { x: 1180, y: 750, w: 180, h: 80 }   // electricidad -> cápsulas
+    ],
+    stations: [
+      { id: 'em',  room: 'cafe',     x: 710,  y: 110, type: 'emergency', name: 'task.emergency' },
+      { id: 'k1',  room: 'cafe',     x: 595,  y: 205, type: 'wires',     name: 'task.wires' },
+      { id: 'k2',  room: 'cafe',     x: 830,  y: 75,  type: 'download',  name: 'task.download' },
+      { id: 'cm',  room: 'comms',    x: 395,  y: 95,  type: 'download',  name: 'task.comms' },
+      { id: 'd1',  room: 'dorms',    x: 1055, y: 95,  type: 'numbers',   name: 'task.lockers' },
+      { id: 'o1',  room: 'oxygen',   x: 1165, y: 95,  type: 'calibrate', name: 'task.oxyFilter' },
+      { id: 'o2',  room: 'oxygen',   x: 1275, y: 190, type: 'wires',     name: 'task.oxyPump' },
+      { id: 'so',  room: 'sonar',    x: 505,  y: 275, type: 'calibrate', name: 'task.sonar' },
+      { id: 'b1',  room: 'biolab',   x: 75,   y: 365, type: 'numbers',   name: 'task.samples' },
+      { id: 'b2',  room: 'biolab',   x: 245,  y: 515, type: 'download',  name: 'task.fishFeed' },
+      { id: 'ro',  room: 'robotics', x: 375,  y: 645, type: 'wires',     name: 'task.robot' },
+      { id: 'tr',  room: 'trench',   x: 245,  y: 795, type: 'asteroids', name: 'task.trench' },
+      { id: 'dm',  room: 'dome',     x: 960,  y: 330, type: 'simon',     name: 'task.domeLights' },
+      { id: 'dk',  room: 'dome',     x: 680,  y: 570, type: 'card',      name: 'task.card' },
+      { id: 'fo',  room: 'foundry',  x: 1135, y: 275, type: 'numbers',   name: 'task.forge' },
+      { id: 'st',  room: 'storage',  x: 1265, y: 645, type: 'wires',     name: 'task.boxes' },
+      { id: 'rx',  room: 'reactor',  x: 1395, y: 355, type: 'reactor',   name: 'task.reactorFix' },
+      { id: 'r2',  room: 'reactor',  x: 1565, y: 525, type: 'simon',     name: 'task.startReactor' },
+      { id: 'pd',  room: 'pods',     x: 1545, y: 675, type: 'download',  name: 'task.pods' },
+      { id: 'cam', room: 'security', x: 545,  y: 750, type: 'cameras',   name: 'task.cameras' },
+      { id: 'adm', room: 'admin',    x: 760,  y: 735, type: 'admin',     name: 'task.adminMap' },
+      { id: 'a1',  room: 'admin',    x: 905,  y: 735, type: 'card',      name: 'task.card' },
+      { id: 'lt',  room: 'electrical', x: 1035, y: 750, type: 'lights',  name: 'task.lights' },
+      { id: 'e1',  room: 'electrical', x: 1145, y: 820, type: 'wires',   name: 'task.electricWires' }
+    ],
+    vents: [
+      { id: 'vBi', net: 'A', x: 65,   y: 525 }, { id: 'vTr', net: 'A', x: 70,   y: 805 }, { id: 'vSo', net: 'A', x: 365,  y: 360 },
+      { id: 'vCa', net: 'B', x: 585,  y: 65  }, { id: 'vCo', net: 'B', x: 495,  y: 190 }, { id: 'vDo', net: 'B', x: 1065, y: 200 },
+      { id: 'vOx', net: 'C', x: 1285, y: 85  }, { id: 'vFo', net: 'C', x: 1275, y: 360 }, { id: 'vRe', net: 'C', x: 1575, y: 345 },
+      { id: 'vSe', net: 'D', x: 615,  y: 830 }, { id: 'vRo', net: 'D', x: 535,  y: 660 }, { id: 'vDm', net: 'D', x: 965,  y: 575 },
+      { id: 'vSt', net: 'E', x: 1105, y: 660 }, { id: 'vEl', net: 'E', x: 1030, y: 830 }, { id: 'vPo', net: 'E', x: 1385, y: 815 }
+    ],
+    cameras: [
+      { id: 'c1', x: 360,  y: 450 }, { id: 'c2', x: 680,  y: 450 },
+      { id: 'c3', x: 1290, y: 450 }, { id: 'c4', x: 1270, y: 790 }
+    ],
+    spawn: { x: 710, y: 175, r: 70 },
+    nodes: {
+      cafe: [710, 150], comms: [440, 135], dorms: [995, 140], oxygen: [1220, 140], sonar: [440, 310], biolab: [160, 440],
+      robotics: [450, 600], trench: [160, 760], dome: [800, 340], foundry: [1200, 310], storage: [1190, 600], reactor: [1480, 440],
+      pods: [1470, 760], admin: [820, 780], security: [555, 785], electrical: [1090, 785],
+      jTop: [800, 270], jWc: [450, 450], jEc: [1190, 450], dW: [680, 450], dE: [960, 450], dNW: [680, 340], dNE: [960, 340],
+      dSW: [680, 560], dSE: [960, 560], dS: [820, 560], jBot: [820, 650]
+    },
+    edges: [
+      ['cafe', 'comms'], ['cafe', 'dorms'], ['dorms', 'oxygen'], ['cafe', 'jTop'], ['jTop', 'dome'],
+      ['comms', 'sonar'], ['sonar', 'jWc'], ['jWc', 'biolab'], ['jWc', 'robotics'], ['jWc', 'dW'],
+      ['dW', 'dNW'], ['dNW', 'dome'], ['dome', 'dNE'], ['dNE', 'dE'], ['dE', 'dSE'], ['dSE', 'dS'], ['dS', 'dSW'], ['dSW', 'dW'],
+      ['dS', 'jBot'], ['jBot', 'admin'], ['admin', 'security'], ['admin', 'electrical'], ['security', 'robotics'],
+      ['security', 'trench'], ['biolab', 'trench'], ['dE', 'jEc'], ['jEc', 'foundry'], ['jEc', 'storage'], ['jEc', 'reactor'],
+      ['oxygen', 'foundry'], ['reactor', 'pods'], ['electrical', 'storage'], ['electrical', 'pods']
+    ]
+  };
+
+  var MAP = {};
+  var DEFS = { nave: DEF_NAVE, abisal: DEF_ABISAL };
+  MAP.DEFS = DEFS;
+  MAP.IDS = ['nave', 'abisal'];
   MAP.TASK_TYPES = ['wires', 'numbers', 'download', 'calibrate', 'card', 'asteroids', 'simon'];
 
   MAP.inRect = function (x, y) {
+    for (var h = 0; h < MAP.holes.length; h++) {
+      var o = MAP.holes[h];
+      if (x > o.x && x < o.x + o.w && y > o.y && y < o.y + o.h) return false;
+    }
     for (var i = 0; i < MAP.rects.length; i++) {
       var r = MAP.rects[i];
       if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return true;
@@ -108,7 +221,7 @@
     return false;
   };
   // Rejilla rápida (celdas de 5) para calcular lo que se ve
-  var CELL = 5, GW = Math.ceil(MAP.w / CELL) + 2, GH = Math.ceil(MAP.h / CELL) + 2, GRID = null;
+  var CELL = 5, GW = 0, GH = 0, GRID = null;
   MAP.open = function (x, y) {
     if (!GRID) {
       GRID = new Uint8Array(GW * GH);
@@ -191,6 +304,18 @@
     while (p[0] !== from) { p.unshift(prev[p[0]]); if (p[0] === undefined) return [from]; }
     return p;
   };
+
+  // Cambia de mapa. Todos los archivos usan el mismo objeto MAP, así que basta con rellenarlo.
+  MAP.use = function (id) {
+    var d = DEFS[id] || DEF_NAVE;
+    if (MAP.id === d.id) return false;
+    ['id', 'name', 'w', 'h', 'wallFace', 'rooms', 'corridors', 'stations', 'vents', 'cameras', 'labels', 'spawn', 'nodes', 'edges'].forEach(function (k) { MAP[k] = d[k]; });
+    MAP.holes = d.holes || [];
+    MAP.rects = MAP.rooms.concat(MAP.corridors);
+    GW = Math.ceil(MAP.w / CELL) + 2; GH = Math.ceil(MAP.h / CELL) + 2; GRID = null;
+    return true;
+  };
+  MAP.use('nave');
 
   root.NAVE_MAP = MAP;
   if (typeof module !== 'undefined') module.exports = MAP;

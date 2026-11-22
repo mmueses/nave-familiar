@@ -167,6 +167,7 @@
   // ---------- Recibir el estado ----------
   function onSnap(n) {
     s = n;
+    if (n.map) MAP.use(n.map);
     if (n.lang && n.lang !== I18N.lang) { I18N.set(n.lang); I18N.apply(); uiKey = {}; }
     switch (n.ph) {
       case 'lobby': renderLobby(); break;
@@ -204,7 +205,7 @@
       });
       $('hostBox').classList.toggle('hidden', s.host !== pid);
       $('pTotalVal').textContent = s.settings.total;
-      seg('pImp', s.settings.impostors); seg('pLang', s.lang); seg('pBot', s.settings.botLevel);
+      seg('pImp', s.settings.impostors); seg('pLang', s.lang); seg('pBot', s.settings.botLevel); seg('pMap', s.settings.map || 'nave');
       if (refreshSettings) refreshSettings();
       var maxI = NaveGame.maxImps(Math.max(s.settings.total, s.players.length));
       var ib = $('pImp').querySelectorAll('button');
@@ -224,6 +225,7 @@
   bindSeg('pImp', function (v) { send({ t: 'set', s: { impostors: +v } }); });
   bindSeg('pLang', function (v) { send({ t: 'set', s: {}, lang: v }); });
   bindSeg('pBot', function (v) { send({ t: 'set', s: { botLevel: v } }); });
+  bindSeg('pMap', function (v) { send({ t: 'set', s: { map: v } }); });
   var refreshSettings = AJUSTES.build($('setPanel'), function () { return (s && s.settings) || NaveGame.defaultSettings(); }, function (ch) { send({ t: 'set', s: ch }); });
   // Armario: elegir sombrero, disfraz y efecto (se desbloquean por nivel)
   var lookTab = 'hat';
@@ -544,6 +546,7 @@
     MAP.rects.forEach(function (r) { x.strokeRect(r.x, r.y, r.w, r.h); });
     x.fillStyle = 'rgba(40,60,255,0.72)';
     MAP.rects.forEach(function (r) { x.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4); });   // tapa las líneas interiores
+    (MAP.holes || []).forEach(function (o) { x.clearRect(o.x, o.y, o.w, o.h); x.strokeRect(o.x, o.y, o.w, o.h); });
     x.textAlign = 'center'; x.textBaseline = 'middle';
     x.font = 'bold 26px system-ui, sans-serif'; x.lineWidth = 5; x.strokeStyle = 'rgba(0,0,30,0.6)';
     MAP.rooms.forEach(function (r) {

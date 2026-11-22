@@ -62,7 +62,7 @@
     { k: 'anonVotes',    vals: [false, true],               def: false,    fmt: 'yn' }
   ];
   Game.defaultSettings = function () {
-    var s = { total: 8, impostors: 1, botLevel: 'easy' };
+    var s = { total: 8, impostors: 1, botLevel: 'easy', map: 'nave' };
     Game.SETTINGS.forEach(function (d) { s[d.k] = d.def; });
     return s;
   };
@@ -144,6 +144,7 @@
     var k = parseInt(s.impostors, 10);
     if (k >= 1 && k <= 3) this.settings.impostors = k;
     if (s.botLevel && Game.BOT[s.botLevel]) this.settings.botLevel = s.botLevel;
+    if (s.map && MAP.DEFS[s.map]) this.settings.map = s.map;
     var self = this;
     Game.SETTINGS.forEach(function (d) { if (s.hasOwnProperty(d.k) && d.vals.indexOf(s[d.k]) >= 0) self.settings[d.k] = s[d.k]; });
     this.settings.impostors = Math.min(this.settings.impostors, Game.maxImps(Math.max(this.settings.total, this.humans().length)));
@@ -155,6 +156,8 @@
     var humans = this.humans();
     if (!humans.length) return false;
     var self = this;
+    MAP.use(this.settings.map);
+    this.playMap = MAP.id;
     this.order = this.order.filter(function (id) { if (self.players[id].bot) { delete self.players[id]; return false; } return true; });
     var total = Math.min(CFG.maxTotal, Math.max(this.settings.total, humans.length));
     var usedNames = humans.map(function (h) { return h.name.toLowerCase(); });
@@ -632,13 +635,13 @@
   // ---------- Bots (fácil, normal, difícil) ----------
   G.nearestNodeTo = function (x, y) {
     var room = MAP.roomAt(x, y);
-    if (room) return room;
+    if (room && MAP.nodes[room] && MAP.clear(x, y, MAP.nodes[room][0], MAP.nodes[room][1])) return room;
     var best = null, bd = Infinity;
     for (var n in MAP.nodes) {
       var d = Math.hypot(MAP.nodes[n][0] - x, MAP.nodes[n][1] - y);
       if (d < bd && MAP.clear(x, y, MAP.nodes[n][0], MAP.nodes[n][1])) { bd = d; best = n; }
     }
-    return best || 'cafe';
+    return best || room || Object.keys(MAP.nodes)[0];
   };
   // Prepara un camino hasta el punto (x,y). then: qué hacer al llegar; sid: estación objetivo
   G.botGo = function (p, x, y, then, sid) {
@@ -811,8 +814,10 @@
       this.botGo(p, fs.x + rnd(-10, 10), fs.y + rnd(-10, 10), 'fake');
       return;
     }
-    var r = pick(MAP.rooms);
-    this.botGo(p, r.x + rnd(30, r.w - 30), r.y + rnd(30, r.h - 30), 'wander');
+    var r = pick(MAP.rooms), wx, wy, tries = 0;
+    do { wx = r.x + rnd(30, r.w - 30); wy = r.y + rnd(30, r.h - 30); } while (!MAP.walkable(wx, wy, 12) && ++tries < 20);
+    if (tries >= 20) { wx = MAP.nodes[r.id][0]; wy = MAP.nodes[r.id][1]; }
+    this.botGo(p, wx, wy, 'wander');
   };
 
   // ---------- Lo que ve cada móvil ----------
@@ -824,7 +829,7 @@
   G.snapshot = function (pid) {
     var p = this.players[pid];
     var self = this;
-    var s = { t: 's', ph: this.phase, lang: root.I18N ? root.I18N.lang : 'es' };
+    var s = { t: 's', ph: this.phase, lang: root.I18N ? root.I18N.lang : 'es', map: this.phase === 'lobby' ? this.settings.map : (this.playMap || MAP.id) };
     s.host = this.hostPid();
     if (this.phase === 'lobby' || !p || !p.role) {
       s.ph = this.phase === 'lobby' ? 'lobby' : 'spectator';

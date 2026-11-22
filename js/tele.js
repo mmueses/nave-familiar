@@ -115,6 +115,7 @@
     for (var k = 0; k < ib.length; k++) ib[k].disabled = +ib[k].getAttribute('data-v') > maxI;
     segOn('setLang', I18N.lang);
     segOn('setBot', game.settings.botLevel);
+    segOn('setMap', game.settings.map);
     $('btnStart').disabled = !humans.length;
     if (game.phase === 'lobby') show('sLobby');
   }
@@ -131,6 +132,7 @@
   bindSeg('setImp', function (v) { game.setSettings({ impostors: +v }); });
   bindSeg('setLang', function (v) { setLang(v); });
   bindSeg('setBot', function (v) { game.setSettings({ botLevel: v }); AJUSTES.save(game.settings); });
+  bindSeg('setMap', function (v) { game.setSettings({ map: v }); AJUSTES.save(game.settings); });
   function setLang(l) { I18N.set(l); I18N.apply(); lastScreen = null; }
   $('btnStart').onclick = function () { startGame(); };
   $('btnFs').onclick = function () {

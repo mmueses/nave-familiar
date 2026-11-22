@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0b1026">
 <title>Nave Familiar · Móvil</title>
-<link rel="stylesheet" href="css/estilo.css?v=11">
+<link rel="stylesheet" href="css/estilo.css?v=12">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -51,6 +51,7 @@
     <div class="row"><span data-i18n="tv.total"></span><div class="stepper"><button class="sec" id="pMinus">−</button><b id="pTotalVal">8</b><button class="sec" id="pPlus">+</button></div></div>
     <div class="row"><span data-i18n="tv.impostors"></span><div class="seg" id="pImp"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button></div></div>
     <div class="row"><span data-i18n="tv.botLevel"></span><div class="seg" id="pBot"><button data-v="easy" data-i18n="tv.easy"></button><button data-v="normal" data-i18n="tv.normal"></button><button data-v="hard" data-i18n="tv.hard"></button></div></div>
+    <div class="row"><span data-i18n="tv.map"></span><div class="seg" id="pMap"><button data-v="nave" data-i18n="map.nave"></button><button data-v="abisal" data-i18n="map.abisal"></button></div></div>
     <button class="sec" id="btnSettings" data-i18n="set.open"></button>
     <div class="row"><span data-i18n="lang.label"></span><div class="seg" id="pLang"><button data-v="es">ES</button><button data-v="en">EN</button></div></div>
     <button class="big" id="btnStart" data-i18n="ph.startHere"></button>
@@ -160,19 +161,20 @@
   <canvas class="minimap" id="admCv"></canvas>
 </div>
 
-<script src="vendor/peerjs.min.js?v=11"></script>
-<script src="js/i18n.js?v=11"></script>
-<script src="js/map.js?v=11"></script>
-<script src="js/game.js?v=11"></script>
-<script src="js/disfraces.js?v=11"></script>
-<script src="js/draw.js?v=11"></script>
-<script src="js/nave.js?v=11"></script>
-<script src="js/net.js?v=11"></script>
-<script src="vendor/qrcode.js?v=11"></script>
-<script src="js/servidor.js?v=11"></script>
-<script src="js/ajustes.js?v=11"></script>
-<script src="js/minijuegos.js?v=11"></script>
-<script src="js/movil.js?v=11"></script>
+<script src="vendor/peerjs.min.js?v=12"></script>
+<script src="js/i18n.js?v=12"></script>
+<script src="js/map.js?v=12"></script>
+<script src="js/game.js?v=12"></script>
+<script src="js/disfraces.js?v=12"></script>
+<script src="js/draw.js?v=12"></script>
+<script src="js/nave.js?v=12"></script>
+<script src="js/abisal.js?v=12"></script>
+<script src="js/net.js?v=12"></script>
+<script src="vendor/qrcode.js?v=12"></script>
+<script src="js/servidor.js?v=12"></script>
+<script src="js/ajustes.js?v=12"></script>
+<script src="js/minijuegos.js?v=12"></script>
+<script src="js/movil.js?v=12"></script>
 <script>if ('serviceWorker' in navigator) { try { navigator.serviceWorker.register('sw.js'); } catch (e) {} }</script>
 </body>
 </html>
