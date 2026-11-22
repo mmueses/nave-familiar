@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nave Familiar</title>
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+<div class="screen home">
+  <h1 data-i18n="app.title">Nave Familiar</h1>
+  <div class="muted" data-i18n="app.subtitle"></div>
+  <a class="card" id="toTv" href="tele.html">
+    <b>📺 <span data-i18n="home.tv"></span></b>
+    <span class="muted" data-i18n="home.tvHint"></span>
+  </a>
+  <a class="card" id="toPhone" href="movil.html">
+    <b>📱 <span data-i18n="home.phone"></span></b>
+    <span class="muted" data-i18n="home.phoneHint"></span>
+  </a>
+  <div class="row"><span data-i18n="lang.label"></span>
+    <div class="seg"><button data-l="es">Español</button><button data-l="en">English</button></div>
+  </div>
+</div>
+<script src="js/i18n.js"></script>
+<script>
+  (function () {
+    var q = location.search;
+    // Si llega con código (QR), ir directo al móvil
+    if (/[?&]sala=/.test(q)) { location.replace('movil.html' + q); return; }
+    if (q) { document.getElementById('toTv').href += q; document.getElementById('toPhone').href += q; }
+    function paint() {
+      I18N.apply();
+      document.querySelectorAll('[data-l]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-l') === I18N.lang); });
+    }
+    document.querySelectorAll('[data-l]').forEach(function (b) {
+      b.onclick = function () { I18N.set(b.getAttribute('data-l')); paint(); };
+    });
+    paint();
+    document.getElementById('toTv').focus();
+  })();
+</script>
+</body>
+</html>

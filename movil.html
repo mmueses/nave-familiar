@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1026">
+<title>Nave Familiar · Móvil</title>
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body class="ph">
+
+<div id="sJoin" class="screen">
+  <div class="form">
+    <h1 style="text-align:center" data-i18n="app.title"></h1>
+    <label for="code" data-i18n="ph.code"></label>
+    <input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
+    <label for="name" data-i18n="ph.name"></label>
+    <input id="name" maxlength="12" autocomplete="off">
+    <label data-i18n="ph.color"></label>
+    <div class="swatches" id="sw1"></div>
+    <div id="joinErr" style="color:#ff8080;font-weight:700"></div>
+    <button class="big" id="btnJoin" data-i18n="ph.join"></button>
+  </div>
+</div>
+
+<div id="sWait" class="screen hidden"><h2 id="waitText"></h2></div>
+
+<div id="sLobby" class="screen hidden" style="gap:14px">
+  <div class="muted" data-i18n="ph.youAre"></div>
+  <div id="meAvatar"></div>
+  <h2 id="meName" style="margin:0"></h2>
+  <div class="swatches" id="sw2" style="width:min(420px,94vw)"></div>
+  <div class="muted" data-i18n="ph.waiting"></div>
+  <div class="plist" id="lobbyList"></div>
+  <div id="hostBox" class="hidden" style="display:flex;flex-direction:column;gap:10px;align-items:center">
+    <div class="muted" data-i18n="ph.hostHint"></div>
+    <div class="row"><span data-i18n="tv.total"></span><div class="seg" id="pTotal"><button data-v="7">7</button><button data-v="8">8</button></div></div>
+    <div class="row"><span data-i18n="tv.impostors"></span><div class="seg" id="pImp"><button data-v="1">1</button><button data-v="2">2</button></div></div>
+    <div class="row"><span data-i18n="lang.label"></span><div class="seg" id="pLang"><button data-v="es">ES</button><button data-v="en">EN</button></div></div>
+    <button class="big" id="btnStart" data-i18n="ph.startHere"></button>
+  </div>
+</div>
+
+<div id="sIntro" class="screen hidden" style="gap:14px">
+  <div id="introAvatar"></div>
+  <div class="role" id="introRole"></div>
+  <div id="introHint" style="font-size:1.1em;max-width:90vw"></div>
+  <div id="introPartner" class="muted"></div>
+  <div class="cover hidden" id="cover" data-i18n="ph.tapHide"></div>
+  <div class="muted" data-i18n="ph.tapHide" id="hideHint"></div>
+</div>
+
+<div id="sPlay" class="screen hidden">
+  <canvas id="cv"></canvas>
+  <div class="hud">
+    <div class="tasks" id="taskBox"></div>
+    <div style="margin-left:auto;display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+      <div class="rolebadge" id="badge"></div>
+      <button class="sec mapbtn" id="btnMap">🗺️</button>
+    </div>
+  </div>
+  <div class="alertbar hidden" id="phLights" data-i18n="ph.lightsOut"></div>
+  <div class="msg hidden" id="ghostMsg" data-i18n="ph.ghost"></div>
+  <div class="joyhint" id="joyHint">🕹️</div>
+  <div class="joy hidden" id="joy"><i id="knob"></i></div>
+  <div class="controls">
+    <button class="act sab hidden" id="bSab"><span data-i18n="ph.sabotage"></span><span class="cd hidden"></span></button>
+    <button class="act frz hidden" id="bFrz"><span data-i18n="ph.freeze"></span><span class="cd hidden"></span></button>
+    <button class="act rep" id="bRep" data-i18n="ph.report"></button>
+    <button class="act use" id="bUse" data-i18n="ph.use"></button>
+  </div>
+</div>
+
+<div id="sMeeting" class="screen hidden" style="gap:10px;justify-content:flex-start;padding-top:calc(20px + env(safe-area-inset-top))">
+  <h2 style="margin:0" data-i18n="tv.meeting"></h2>
+  <div class="timer" id="mTimer"></div>
+  <div id="mDiscuss" style="display:flex;flex-direction:column;gap:12px;align-items:center">
+    <div style="font-size:1.2em" data-i18n="ph.discuss"></div>
+    <button class="big" id="btnReady" data-i18n="ph.readyVote"></button>
+    <div class="muted hidden" id="readyWait" data-i18n="ph.waitOthers"></div>
+  </div>
+  <div id="mVote" class="hidden" style="display:flex;flex-direction:column;gap:10px;align-items:center">
+    <div style="font-size:1.2em;font-weight:700" id="voteTitle"></div>
+    <div class="votelist" id="voteList"></div>
+  </div>
+</div>
+
+<div id="sInfo" class="screen hidden" style="gap:12px">
+  <div style="font-size:3em">📺</div>
+  <h1 id="infoTitle"></h1>
+  <div id="infoText" style="font-size:1.2em"></div>
+  <button class="big hidden" id="btnLobby" data-i18n="ph.again"></button>
+</div>
+
+<div id="mgModal" class="modal hidden">
+  <button class="x" id="mgClose" data-i18n="ph.close"></button>
+  <div id="mgBox"></div>
+</div>
+
+<div id="mapModal" class="modal hidden">
+  <button class="x" id="mapClose" data-i18n="ph.close"></button>
+  <canvas class="minimap" id="miniCv"></canvas>
+</div>
+
+<script src="vendor/peerjs.min.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/map.js"></script>
+<script src="js/game.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/net.js"></script>
+<script src="js/minijuegos.js"></script>
+<script src="js/movil.js"></script>
+</body>
+</html>

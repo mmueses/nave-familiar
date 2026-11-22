@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nave Familiar · Tele</title>
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body class="tv">
+<canvas id="map"></canvas>
+
+<div id="sConnecting" class="screen"><h1 data-i18n="tv.connecting"></h1></div>
+
+<div id="sLobby" class="screen lobby hidden">
+  <div class="left">
+    <h1 data-i18n="app.title"></h1>
+    <div class="muted" data-i18n="tv.code" style="font-size:1.6vw"></div>
+    <div class="code" id="code">----</div>
+    <div data-i18n="tv.joinHow" style="font-size:1.5vw"></div>
+    <div class="url" id="url"></div>
+    <div class="row" style="justify-content:flex-start;gap:1.5vw">
+      <div class="qr" id="qr"></div>
+      <div class="muted" data-i18n="tv.orScan" style="font-size:1.4vw"></div>
+    </div>
+  </div>
+  <div class="right">
+    <h2 style="margin:0;font-size:2vw" data-i18n="tv.players"></h2>
+    <div class="plist" id="plist"></div>
+    <div class="muted" id="botsFill" style="font-size:1.4vw"></div>
+    <div class="settings">
+      <span data-i18n="tv.total"></span>
+      <div class="seg" id="setTotal"><button data-v="7">7</button><button data-v="8">8</button></div>
+      <span data-i18n="tv.impostors"></span>
+      <div class="seg" id="setImp"><button data-v="1">1</button><button data-v="2">2</button></div>
+      <span data-i18n="tv.botLevel"></span>
+      <div class="seg"><button class="on" data-i18n="tv.easy"></button><button disabled data-i18n="tv.normal"></button><button disabled data-i18n="tv.hard"></button></div>
+      <span data-i18n="lang.label"></span>
+      <div class="seg" id="setLang"><button data-v="es">Español</button><button data-v="en">English</button></div>
+    </div>
+    <div class="row" style="justify-content:flex-start">
+      <button class="big" id="btnStart" data-i18n="tv.start"></button>
+      <button class="sec" id="btnFs" data-i18n="tv.fullscreen"></button>
+    </div>
+  </div>
+</div>
+
+<div id="sIntro" class="screen overlay hidden">
+  <p class="bigtitle" id="introTitle"></p>
+  <p class="subtitle" data-i18n="tv.roleIntro"></p>
+</div>
+
+<div id="sPlay" class="hidden">
+  <div class="topbar">
+    <span data-i18n="tv.tasks"></span>
+    <div class="taskbar"><div id="taskFill"></div></div>
+    <span id="clock">0:00</span>
+  </div>
+  <div class="alert hidden" id="lightsAlert" data-i18n="tv.lightsOut"></div>
+</div>
+
+<div id="sMeeting" class="screen overlay hidden">
+  <p class="bigtitle" data-i18n="tv.meeting"></p>
+  <p class="subtitle" id="mReason"></p>
+  <div class="row" style="gap:2vw"><span class="subtitle" id="mPhase"></span><span class="timer" id="mTimer"></span></div>
+  <div class="mgrid" id="mGrid"></div>
+</div>
+
+<div id="sEject" class="screen overlay hidden">
+  <div class="ejectStage" id="ejectStage"></div>
+  <p class="subtitle" id="ejectText" style="font-size:3vw;font-weight:900"></p>
+  <p class="subtitle" id="ejectSub"></p>
+  <div class="mgrid" id="ejectGrid"></div>
+</div>
+
+<div id="sEnd" class="screen overlay hidden">
+  <p class="bigtitle" id="endTitle"></p>
+  <p class="subtitle" id="endReason"></p>
+  <p class="subtitle" id="endImpLabel"></p>
+  <div class="row" id="endImps" style="gap:2vw"></div>
+  <p class="muted" id="endTime" style="font-size:1.5vw"></p>
+  <button class="big" id="btnAgain" data-i18n="tv.again"></button>
+</div>
+
+<div class="lost hidden" id="lost"><span data-i18n="tv.lostTitle"></span> · <span data-i18n="tv.lostText"></span></div>
+
+<script src="vendor/peerjs.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/map.js"></script>
+<script src="js/game.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/net.js"></script>
+<script src="js/tele.js"></script>
+</body>
+</html>
