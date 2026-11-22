@@ -2,7 +2,7 @@
 (function (root) {
   var TEXTS = {
     es: {
-      'app.title': 'The Sneaky One', 'home.shareShort': 'Compartir', 'home.installShort': 'Instalar',
+      'app.title': 'Sneak Out', 'home.shareShort': 'Compartir', 'home.installShort': 'Instalar',
       'app.subtitle': 'Juego de impostores para jugar en familia',
       'home.tv': 'Soy la TELE',
       'home.tvHint': 'Pantalla común: mapa, votaciones y resultados',
@@ -44,7 +44,7 @@
       'app.install': '📲 Instalar como app',
       'app.installHelp': 'Para instalarlo como app en Android: abre el menú ⋮ de Chrome y pulsa «Añadir a pantalla de inicio» o «Instalar aplicación».',
       'app.share': '📤 Enviar a la familia',
-      'app.shareText': '¡Juega a The Sneaky One con nosotros! Ábrelo y pulsa «Instalar como app»:',
+      'app.shareText': '¡Juega a Sneak Out con nosotros! Ábrelo y pulsa «Instalar como app»:',
       'app.copied': 'Enlace copiado. Pégalo en WhatsApp:',
 
       'room.cafe': 'Comedor', 'room.engines': 'Motores', 'room.bridge': 'Puente de mando',
@@ -233,7 +233,7 @@
       'mg.done': '¡Hecho!'
     },
     en: {
-      'app.title': 'The Sneaky One', 'home.shareShort': 'Share', 'home.installShort': 'Install',
+      'app.title': 'Sneak Out', 'home.shareShort': 'Share', 'home.installShort': 'Install',
       'app.subtitle': 'An impostor game to play with your family',
       'home.tv': 'I am the TV',
       'home.tvHint': 'Shared screen: map, voting and results',
@@ -275,7 +275,7 @@
       'app.install': '📲 Install as an app',
       'app.installHelp': 'To install it as an app on Android: open the Chrome ⋮ menu and tap “Add to Home screen” or “Install app”.',
       'app.share': '📤 Send to family',
-      'app.shareText': 'Play The Sneaky One with us! Open it and tap “Install as an app”:',
+      'app.shareText': 'Play Sneak Out with us! Open it and tap “Install as an app”:',
       'app.copied': 'Link copied. Paste it in WhatsApp:',
 
       'room.cafe': 'Cafeteria', 'room.engines': 'Engines', 'room.bridge': 'Bridge',

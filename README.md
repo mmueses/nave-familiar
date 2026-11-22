@@ -1,4 +1,4 @@
-# The Sneaky One
+# Sneak Out
 
 Juego de impostores para jugar en familia: la tele (o cualquier pantalla) muestra la partida y cada jugador usa su móvil.
 
