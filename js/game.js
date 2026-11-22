@@ -19,7 +19,7 @@
     reactorTime: 45,
     splashTime: 2.5, discussTime: 30, voteTime: 35, ejectTime: 8, introTime: 6,
     tasksPerPlayer: 5, maxHumans: 12, maxTotal: 12, minTotal: 5,
-    botTakeover: 15 // segundos desconectado antes de que un bot mueva a ese jugador
+    botTakeover: 30 // segundos desconectado antes de que un bot mueva a ese jugador
   };
 
   function rnd(a, b) { return a + Math.random() * (b - a); }
@@ -192,7 +192,9 @@
 
   // ---------- Utilidades ----------
   G.isGhost = function (p) { return !p.alive || p.ejected; };
-  G.isBotNow = function (p) { return p.bot || (!p.connected && this.now - p.discAt > CFG.botTakeover); };
+  // Un bot solo maneja a un jugador desconectado si es TRIPULANTE (para que sus tareas no bloqueen la partida).
+  // Un impostor desconectado NUNCA lo maneja un bot: se queda quieto hasta que vuelva.
+  G.isBotNow = function (p) { return p.bot || (!p.connected && p.role === 'crew' && this.now - p.discAt > CFG.botTakeover); };
   G.visionOf = function (p) {
     if (this.isGhost(p)) return CFG.ghostVision;
     if (p.role === 'imp') return CFG.impVision;

@@ -112,7 +112,7 @@
   setInterval(function () {
     if (!conn || SOLO) return;
     send({ t: 'ping' });
-    if (Date.now() - lastData > 6500) conn.close();
+    if (Date.now() - lastData > 10000) conn.close();
   }, 2000);
 
   function onData(m) {
@@ -225,6 +225,7 @@
     $('introRole').style.color = imp ? '#ff4d4d' : '#6fd0ff';
     $('introSub').textContent = s.nImp === 1 ? t('tv.thereAre1') : t('tv.thereAreN', { n: s.nImp });
     $('introHint').textContent = imp ? t('ph.impHint') : t('ph.crewHint');
+    if (imp && s.me.partners && s.me.partners.length) $('introHint').textContent += ' ' + t('ph.partner', { name: s.me.partners.join(', ') });
     $('cover').classList.add('hidden');
     drawLineup(imp);
     vib(imp ? [100, 60, 100] : 120);

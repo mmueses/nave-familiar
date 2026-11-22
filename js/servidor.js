@@ -19,7 +19,7 @@
       if (game.phase !== 'lobby') game.tick(dt);
       if (now - lastSend >= 90) { lastSend = now; self.sendAll(); }
       var ms = Date.now();
-      self.conns.slice().forEach(function (c) { if (!c.local && ms - c.last > 9000) { c.w.close(); self.drop(c); } });
+      self.conns.slice().forEach(function (c) { if (!c.local && ms - c.last > 15000) { c.w.close(); self.drop(c); } });
     }, 40);
   }
   var P = NaveServer.prototype;
