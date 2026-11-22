@@ -12,7 +12,7 @@
 <div id="sJoin" class="screen">
   <div class="form">
     <h1 style="text-align:center" data-i18n="app.title"></h1>
-    <label for="code" data-i18n="ph.code"></label>
+    <label for="code" id="codeLabel" data-i18n="ph.code"></label>
     <input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
     <label for="name" data-i18n="ph.name"></label>
     <input id="name" maxlength="12" autocomplete="off">
@@ -30,10 +30,10 @@
   <div id="meAvatar"></div>
   <h2 id="meName" style="margin:0"></h2>
   <div class="swatches" id="sw2" style="width:min(420px,94vw)"></div>
-  <div class="muted" data-i18n="ph.waiting"></div>
+  <div class="muted" id="waitingTxt" data-i18n="ph.waiting"></div>
   <div class="plist" id="lobbyList"></div>
   <div id="hostBox" class="hidden" style="display:flex;flex-direction:column;gap:10px;align-items:center">
-    <div class="muted" data-i18n="ph.hostHint"></div>
+    <div class="muted" id="hostHint" data-i18n="ph.hostHint"></div>
     <div class="row"><span data-i18n="tv.total"></span><div class="seg" id="pTotal"><button data-v="7">7</button><button data-v="8">8</button></div></div>
     <div class="row"><span data-i18n="tv.impostors"></span><div class="seg" id="pImp"><button data-v="1">1</button><button data-v="2">2</button></div></div>
     <div class="row"><span data-i18n="lang.label"></span><div class="seg" id="pLang"><button data-v="es">ES</button><button data-v="en">EN</button></div></div>
@@ -73,6 +73,7 @@
 
 <div id="sMeeting" class="screen hidden" style="gap:10px;justify-content:flex-start;padding-top:calc(20px + env(safe-area-inset-top))">
   <h2 style="margin:0" data-i18n="tv.meeting"></h2>
+  <div id="mReason" class="muted" style="font-size:1.05em"></div>
   <div class="timer" id="mTimer"></div>
   <div id="mDiscuss" style="display:flex;flex-direction:column;gap:12px;align-items:center">
     <div style="font-size:1.2em" data-i18n="ph.discuss"></div>
@@ -89,6 +90,7 @@
   <div style="font-size:3em">📺</div>
   <h1 id="infoTitle"></h1>
   <div id="infoText" style="font-size:1.2em"></div>
+  <div id="infoSub" style="font-size:1.1em;max-width:90vw"></div>
   <button class="big hidden" id="btnLobby" data-i18n="ph.again"></button>
 </div>
 

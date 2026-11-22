@@ -18,6 +18,7 @@
   var myColor = parseInt(store.get('nave.color'), 10);
   if (isNaN(myColor)) myColor = Math.floor(Math.random() * COLORS.length);
 
+  var SOLO = /[?&]solo=1/.test(location.search);
   var conn = null, code = null, lastData = 0, retryTimer = null, joinedOnce = false, stopRetry = false;
   var s = null;           // última foto recibida
   var screen = null;
@@ -54,7 +55,19 @@
   $('name').value = store.get('nave.name') || '';
   $('code').addEventListener('input', function () { this.value = NET.cleanCode(this.value); });
   buildSwatches($('sw1'));
+  if (SOLO) {
+    $('code').classList.add('hidden'); $('codeLabel').classList.add('hidden');
+    $('btnJoin').setAttribute('data-i18n', 'ph.play');
+    $('waitingTxt').classList.add('hidden'); $('hostHint').classList.add('hidden');
+  }
   $('btnJoin').onclick = function () {
+    if (SOLO) {
+      var nm = $('name').value.trim();
+      if (!nm) { $('name').focus(); return; }
+      store.set('nave.name', nm);
+      startSolo();
+      return;
+    }
     var c = NET.cleanCode($('code').value);
     var n = $('name').value.trim();
     if (c.length !== 4) { $('joinErr').textContent = t('ph.notFound'); return; }
@@ -110,6 +123,39 @@
     }
     if (m.t === 'hi') { joinedOnce = true; return; }
     if (m.t === 's') onSnap(m);
+  }
+
+  // ---------- Modo solo: la partida corre en este mismo dispositivo ----------
+  function startSolo() {
+    var g = new NaveGame();
+    g.join(pid, store.get('nave.name'), myColor);
+    conn = { send: function (o) { soloMsg(g, o); }, close: function () {} };
+    joinedOnce = true;
+    var last = performance.now(), lastSnap = 0;
+    setInterval(function () {
+      var now = performance.now();
+      var dt = Math.min(0.25, (now - last) / 1000); last = now;
+      if (g.phase !== 'lobby') g.tick(dt);
+      if (now - lastSnap >= 100) { lastSnap = now; onData(JSON.parse(JSON.stringify(g.snapshot(pid)))); }
+    }, 50);
+    window.__game = g;
+  }
+  function soloMsg(g, m) {
+    switch (m.t) {
+      case 'hello': g.join(pid, m.name, m.color); break;
+      case 'in': g.setInput(pid, m.x, m.y); break;
+      case 'act':
+        if (m.a === 'use') g.use(pid); else if (m.a === 'freeze') g.freeze(pid);
+        else if (m.a === 'report') g.report(pid); else if (m.a === 'sabotage') g.sabotage(pid);
+        else if (m.a === 'ready') g.ready(pid);
+        break;
+      case 'done': g.taskDone(pid, m.sid); break;
+      case 'cancel': g.taskCancel(pid); break;
+      case 'vote': g.vote(pid, m.v); break;
+      case 'set': g.setSettings(m.s); if (m.lang) { I18N.set(m.lang); I18N.apply(); uiKey = {}; } break;
+      case 'start': g.start(); break;
+      case 'lobby': if (g.phase === 'end') g.backToLobby(); break;
+    }
   }
 
   // ---------- Recibir el estado ----------
@@ -396,6 +442,9 @@
   function renderMeeting() {
     show('sMeeting');
     $('mTimer').textContent = s.left + ' s';
+    $('mReason').textContent = s.reason === 'report'
+      ? t('tv.reportBy', { name: rname(s.caller), victim: rname(s.victim) })
+      : t('tv.buttonBy', { name: rname(s.caller) });
     var meAlive = !s.me.ghost;
     var discuss = s.sub === 'discuss';
     $('mDiscuss').classList.toggle('hidden', !discuss);
@@ -437,9 +486,15 @@
     show('sInfo');
     var r = s.res;
     $('btnLobby').classList.add('hidden');
-    $('infoTitle').textContent = t('ph.lookTv');
-    if (r.ejected) $('infoText').textContent = t('tv.ejected', { name: rname(r.ejected) });
-    else $('infoText').textContent = t('tv.noEject');
+    $('infoTitle').textContent = SOLO ? '' : t('ph.lookTv');
+    $('infoTitle').style.color = '';
+    if (r.ejected) {
+      $('infoText').textContent = t('tv.ejected', { name: rname(r.ejected) });
+      $('infoSub').textContent = r.wasImp ? t('tv.wasImp', { name: rname(r.ejected) }) : t('tv.wasNotImp', { name: rname(r.ejected) });
+    } else {
+      $('infoText').textContent = t('tv.noEject');
+      $('infoSub').textContent = r.tie ? t('tv.tie') : t('tv.skipped');
+    }
   }
   function renderEnd() {
     show('sInfo');
@@ -447,6 +502,8 @@
     $('infoTitle').textContent = s.iWon ? t('ph.win') : t('ph.lose');
     $('infoTitle').style.color = s.iWon ? '#30a46c' : '#ff6b6b';
     $('infoText').textContent = r.winner === 'crew' ? t('tv.crewWin') : (r.imps.length > 1 ? t('tv.impsWin') : t('tv.impWin'));
+    $('infoSub').textContent = t({ tasks: 'tv.reasonTasks', ejected: 'tv.reasonEjected', frozen: 'tv.reasonFrozen' }[r.reason]) + ' ' +
+      t('ph.impWas', { names: r.imps.map(rname).join(', ') });
     $('btnLobby').classList.toggle('hidden', s.host !== pid);
   }
   $('btnLobby').onclick = function () { send({ t: 'lobby' }); };
@@ -458,6 +515,7 @@
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { keepAwake(); if (!conn && code && !stopRetry) scheduleRetry(); } });
 
   // ---------- Arranque ----------
+  if (SOLO) { var tvIcon = document.querySelector('#sInfo > div'); if (tvIcon) tvIcon.textContent = '🚀'; }
   I18N.apply();
   show('sJoin');
   // Si ya habíamos entrado antes en esta misma sala (p. ej. al recargar), reconectar solo

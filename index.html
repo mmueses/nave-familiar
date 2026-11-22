@@ -14,6 +14,10 @@
     <b>📺 <span data-i18n="home.tv"></span></b>
     <span class="muted" data-i18n="home.tvHint"></span>
   </a>
+  <a class="card" id="toSolo" href="movil.html?solo=1">
+    <b>🎮 <span data-i18n="home.solo"></span></b>
+    <span class="muted" data-i18n="home.soloHint"></span>
+  </a>
   <a class="card" id="toPhone" href="movil.html">
     <b>📱 <span data-i18n="home.phone"></span></b>
     <span class="muted" data-i18n="home.phoneHint"></span>
@@ -37,7 +41,7 @@
       b.onclick = function () { I18N.set(b.getAttribute('data-l')); paint(); };
     });
     paint();
-    document.getElementById('toTv').focus();
+    document.getElementById('toSolo').focus();
   })();
 </script>
 </body>

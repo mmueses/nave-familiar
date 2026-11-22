@@ -8,6 +8,10 @@
       'home.tvHint': 'Pantalla común: mapa, votaciones y resultados',
       'home.phone': 'Soy un MÓVIL o TABLET',
       'home.phoneHint': 'Para mover tu personaje y votar',
+      'home.solo': 'JUGAR SOLO aquí',
+      'home.soloHint': 'Un jugador con bots, en este dispositivo. Sin tele.',
+      'ph.play': 'Jugar',
+      'ph.impWas': 'El impostor era: {names}',
       'lang.label': 'Idioma',
 
       'room.cafe': 'Comedor', 'room.engines': 'Motores', 'room.bridge': 'Puente de mando',
@@ -122,6 +126,10 @@
       'home.tvHint': 'Shared screen: map, voting and results',
       'home.phone': 'I am a PHONE or TABLET',
       'home.phoneHint': 'To move your character and vote',
+      'home.solo': 'PLAY ALONE here',
+      'home.soloHint': 'One player with bots, on this device. No TV.',
+      'ph.play': 'Play',
+      'ph.impWas': 'The impostor was: {names}',
       'lang.label': 'Language',
 
       'room.cafe': 'Cafeteria', 'room.engines': 'Engines', 'room.bridge': 'Bridge',
