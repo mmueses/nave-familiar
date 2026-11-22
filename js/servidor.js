@@ -72,7 +72,7 @@
       case 'hello':
         var id = String(m.pid || '').slice(0, 40);
         var r = game.join(id, m.name, m.color, m.lvl);
-        if (game.players[id] && m.look) game.players[id].look = m.look;
+        if (game.players[id] && m.look && window.LOOKS) game.players[id].look = LOOKS.valid(m.look);
         if (r !== 'ok') { c.w.send({ t: 'err', e: r }); return; }
         c.pid = id;
         this.conns.slice().forEach(function (o) { if (o !== c && o.pid === c.pid) { o.pid = null; o.w.close(); } });
@@ -80,6 +80,7 @@
         this.onChange();
         break;
       case 'ping': break;
+      case 'look': if (pid && game.players[pid] && window.LOOKS) { game.players[pid].look = LOOKS.valid(m.look); this.onChange(); } break;
       case 'lvl': if (pid && game.players[pid]) game.players[pid].level = Math.max(1, Math.min(999, parseInt(m.lvl, 10) || 1)); this.onChange(); break;
       case 'in': if (pid) game.setInput(pid, m.x, m.y); break;
       case 'act':

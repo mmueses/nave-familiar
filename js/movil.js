@@ -187,7 +187,7 @@
     if (changed('lobby', JSON.stringify([s.players, s.host, s.settings, me, I18N.lang]))) {
       myColor = me.c;
       $('meAvatar').innerHTML = '';
-      $('meAvatar').appendChild(DRAW.avatarCanvas(hexOf(me.c), 90));
+      $('meAvatar').appendChild(DRAW.avatarCanvas(hexOf(me.c), 100, { look: me.k }));
       $('meName').textContent = me.n;
       var li = AJUSTES.levelInfo(xpTotal());
       $('meLevelTxt').textContent = t('xp.level', { n: li.level });
@@ -197,7 +197,7 @@
       var list = $('lobbyList'); list.innerHTML = '';
       s.players.forEach(function (p) {
         var d = document.createElement('div');
-        d.appendChild(DRAW.avatarCanvas(hexOf(p.c), 46));
+        d.appendChild(DRAW.avatarCanvas(hexOf(p.c), 52, { look: p.k }));
         var nm = document.createElement('span'); nm.textContent = p.n; d.appendChild(nm);
         var lv = document.createElement('span'); lv.className = 'lvl'; lv.textContent = t('xp.short', { n: p.l || 1 }); d.appendChild(lv);
         list.appendChild(d);
@@ -225,6 +225,34 @@
   bindSeg('pLang', function (v) { send({ t: 'set', s: {}, lang: v }); });
   bindSeg('pBot', function (v) { send({ t: 'set', s: { botLevel: v } }); });
   var refreshSettings = AJUSTES.build($('setPanel'), function () { return (s && s.settings) || NaveGame.defaultSettings(); }, function (ch) { send({ t: 'set', s: ch }); });
+  // Armario: elegir sombrero, disfraz y efecto (se desbloquean por nivel)
+  var lookTab = 'hat';
+  function curLook() { return LOOKS.valid(myLook()); }
+  function renderWardrobe() {
+    var look = curLook(), lv = myLevel();
+    $('lookPreview').innerHTML = '';
+    $('lookPreview').appendChild(DRAW.avatarCanvas(hexOf(myColor), 120, { look: look }));
+    seg('lookTabs', lookTab);
+    var grid = $('lookGrid'); grid.innerHTML = '';
+    LOOKS.LIST[lookTab].forEach(function (it) {
+      var b = document.createElement('button'); b.className = 'lookItem' + (look[lookTab] === it.id ? ' on' : '');
+      var trial = {}; for (var k in look) trial[k] = look[k]; trial[lookTab] = it.id;
+      b.appendChild(DRAW.avatarCanvas(hexOf(myColor), 64, { look: trial }));
+      var nm = document.createElement('span'); nm.textContent = t('item.' + it.id); b.appendChild(nm);
+      if (it.lv > lv) { b.disabled = true; var lk = document.createElement('i'); lk.textContent = t('look.locked', { n: it.lv }); b.appendChild(lk); }
+      b.onclick = function () {
+        var nl = curLook(); nl[lookTab] = it.id;
+        store.set('nave.look', JSON.stringify(nl));
+        send({ t: 'look', look: nl });
+        uiKey.lobby = null;
+        renderWardrobe();
+      };
+      grid.appendChild(b);
+    });
+  }
+  bindSeg('lookTabs', function (v) { lookTab = v; renderWardrobe(); });
+  $('btnLook').onclick = function () { renderWardrobe(); $('lookModal').classList.remove('hidden'); };
+  $('lookClose').onclick = function () { $('lookModal').classList.add('hidden'); };
   $('btnSettings').onclick = function () { refreshSettings(); $('setModal').classList.remove('hidden'); };
   $('setClose').onclick = function () { $('setModal').classList.add('hidden'); };
   $('btnStart').onclick = function () { send({ t: 'start' }); };
@@ -259,9 +287,9 @@
     order.forEach(function (x, i) {
       var off = i - (n - 1) / 2;
       var px = W / 2 + off * Math.min(70, W / (n + 2)) * (sc / 2);
-      DRAW.character(ctx, px, H - 22 * sc - Math.abs(off) * 2, hexOf(x[0]), { scale: sc * 0.8, name: x[1] });
+      DRAW.character(ctx, px, H - 22 * sc - Math.abs(off) * 2, hexOf(x[0]), { scale: sc * 0.8, name: x[1], look: x[3] });
     });
-    DRAW.character(ctx, W / 2, H - 17 * sc, hexOf(me[0]), { scale: sc, name: me[1], nameColor: '#ffe66b' });
+    DRAW.character(ctx, W / 2, H - 17 * sc, hexOf(me[0]), { scale: sc, name: me[1], nameColor: '#ffe66b', look: me[3] });
   }
   $('sIntro').onclick = function () { $('cover').classList.toggle('hidden'); };
 
@@ -441,7 +469,7 @@
     ctx.fillStyle = '#0b1026'; ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.setTransform(sc, 0, 0, sc, cx - me.x * sc, cy - me.y * sc);
     DRAW.ship(ctx, { labels: true, t: time, tr: t, highlight: pendingStations(), lightsOut: !!s.dark, reactor: !!s.reactor });
-    (s.bd || []).forEach(function (b) { DRAW.frozen(ctx, b[0], b[1], hexOf(b[2]), time); });
+    (s.bd || []).forEach(function (b) { DRAW.frozen(ctx, b[0], b[1], hexOf(b[2]), time, b[3]); });
     var seen = {};
     var others = (s.ps || []).map(function (p) {
       var key = p[3] + '#' + p[2];
@@ -455,10 +483,10 @@
     all.forEach(function (o) {
       if (o.me) {
         if (s.me.vent) return;
-        DRAW.character(ctx, me.x, me.y, hexOf(s.me.c), { name: s.me.n, ghost: s.me.ghost, walk: me.walk, dir: me.dir, nameColor: '#ffe66b' });
+        DRAW.character(ctx, me.x, me.y, hexOf(s.me.c), { name: s.me.n, ghost: s.me.ghost, walk: me.walk, dir: me.dir, nameColor: '#ffe66b', look: s.me.k, t: time });
       } else {
         var p = o.p;
-        DRAW.character(ctx, o.d.x, o.d.y, hexOf(p[2]), { name: p[3], ghost: !!p[4], walk: o.d.walk, dir: o.d.dir, nameColor: p[5] ? '#ff6b6b' : '#fff' });
+        DRAW.character(ctx, o.d.x, o.d.y, hexOf(p[2]), { name: p[3], ghost: !!p[4], walk: o.d.walk, dir: o.d.dir, nameColor: p[5] ? '#ff6b6b' : '#fff', look: p[6], t: time });
       }
     });
     // Sombra: lo que no ves queda oscuro; las paredes tapan la vista
@@ -530,7 +558,7 @@
       x.lineWidth = 4; x.strokeStyle = '#5a4a00'; x.stroke();
       x.fillStyle = '#2a2200'; x.font = 'bold 30px system-ui, sans-serif'; x.fillText('!', st.x, st.y - 8 + bounce);
     });
-    DRAW.character(x, s.me.x, s.me.y, hexOf(s.me.c), { scale: 1.8 });
+    DRAW.character(x, s.me.x, s.me.y, hexOf(s.me.c), { scale: 1.8, look: s.me.k });
   }
   function drawAdmin() {
     var c = fitMap($('admCv'), 0.56);
@@ -558,8 +586,8 @@
       x.setTransform(sc, 0, 0, sc, c.width / 2 - cam.x * sc, c.height / 2 - cam.y * sc);
       DRAW.ship(x, { t: time, tr: t, lightsOut: !!s.dark, reactor: !!s.reactor });
       var feed = (s.cams && s.cams[i]) || { p: [], b: [] };
-      feed.b.forEach(function (b) { DRAW.frozen(x, b[0], b[1], hexOf(b[2]), time); });
-      feed.p.forEach(function (p) { DRAW.character(x, p[0], p[1], hexOf(p[2]), {}); });
+      feed.b.forEach(function (b) { DRAW.frozen(x, b[0], b[1], hexOf(b[2]), time, b[3]); });
+      feed.p.forEach(function (p) { DRAW.character(x, p[0], p[1], hexOf(p[2]), { look: p[3], t: time }); });
       x.setTransform(1, 0, 0, 1, 0, 0);
       x.fillStyle = 'rgba(80,255,140,0.06)';
       for (var y = 0; y < c.height; y += 4) x.fillRect(0, y, c.width, 1);
@@ -586,7 +614,7 @@
       x.save();
       x.translate(-60 + p * (W + 120), H * 0.45 + Math.sin(p * 6) * 12);
       x.rotate(p * Math.PI * 4);
-      DRAW.character(x, 0, 0, hexOf(a.color), { scale: Math.min(3, H / 70) });
+      DRAW.character(x, 0, 0, hexOf(a.color), { scale: Math.min(3, H / 70), look: a.look });
       x.restore();
     }
   }
@@ -605,6 +633,7 @@
 
   // ---------- Reunión ----------
   function rname(id) { return s.roster && s.roster[id] ? s.roster[id].n : '?'; }
+  function rlook(id) { return s.roster && s.roster[id] ? s.roster[id].k : null; }
   function rcol(id) { return s.roster && s.roster[id] ? hexOf(s.roster[id].c) : '#999'; }
   function renderMeeting() {
     show('sMeeting');
@@ -615,8 +644,8 @@
       $('splashTitle').textContent = s.reason === 'report' ? t('sp.body') : t('sp.meeting');
       $('splash').className = 'splash ' + (s.reason === 'report' ? 'body' : 'meet');
       var art = $('splashArt'); art.innerHTML = '';
-      art.appendChild(DRAW.avatarCanvas(rcol(s.caller), 120));
-      if (s.reason === 'report' && s.victim) art.appendChild(DRAW.avatarCanvas(rcol(s.victim), 120, { frozen: true }));
+      art.appendChild(DRAW.avatarCanvas(rcol(s.caller), 130, { look: rlook(s.caller) }));
+      if (s.reason === 'report' && s.victim) art.appendChild(DRAW.avatarCanvas(rcol(s.victim), 130, { frozen: true, look: rlook(s.victim) }));
       vib([200, 80, 200]);
     }
     $('mTimer').textContent = s.left + ' s';
@@ -641,7 +670,7 @@
       var b = document.createElement('button');
       if (!p.alive) b.className = 'dead';
       if (s.myVote === p.id) b.classList.add('mine');
-      b.appendChild(DRAW.avatarCanvas(rcol(p.id), 40, { frozen: !p.alive }));
+      b.appendChild(DRAW.avatarCanvas(rcol(p.id), 44, { frozen: !p.alive, look: rlook(p.id) }));
       var n = document.createElement('span'); n.style.flex = '1';
       n.textContent = rname(p.id) + (p.id === pid ? ' ★' : '') + '  · ' + t('xp.short', { n: (s.roster[p.id] && s.roster[p.id].l) || 1 });
       b.appendChild(n);
@@ -663,7 +692,7 @@
   function renderEject() {
     show('sInfo');
     var r = s.res;
-    if (!ejectAnim || ejectAnim.res !== JSON.stringify(r)) ejectAnim = { res: JSON.stringify(r), t0: performance.now(), color: r.ejected ? s.roster[r.ejected].c : null };
+    if (!ejectAnim || ejectAnim.res !== JSON.stringify(r)) ejectAnim = { res: JSON.stringify(r), t0: performance.now(), color: r.ejected ? s.roster[r.ejected].c : null, look: r.ejected ? s.roster[r.ejected].k : null };
     $('ejectCv').classList.remove('hidden');
     $('btnLobby').classList.add('hidden');
     $('xpBox').classList.add('hidden');

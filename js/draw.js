@@ -378,82 +378,100 @@
     ctx.restore();
   }
 
-  // Astronauta original: casco redondo con visera (se le ven los ojos), traje, mochila, brazos y botas.
+  // Astronauta original, estilo dibujo: contorno grueso y colores planos. opts.look = { hat, suit, fx }
+  var OUT = '#1a1a2e';
+  function ol(ctx, fill, lw) { ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = lw || 2; ctx.strokeStyle = OUT; ctx.stroke(); }
   function character(ctx, x, y, hex, opts) {
     opts = opts || {};
-    var sc = opts.scale || 1;
+    var sc = opts.scale || 1, L = window.LOOKS, look = opts.look || null, T = opts.t || (performance.now() / 1000);
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(sc * (opts.dir || 1), sc);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     if (opts.ghost) ctx.globalAlpha = 0.45;
     var ph = opts.walk ? opts.walk * Math.PI * 2 : 0;
     var step = opts.walk ? Math.sin(ph) * 3.5 : 0;
     var bob = opts.walk ? Math.abs(Math.sin(ph)) * -1.5 : 0;
-    var dark = shade(hex, -0.35), light = shade(hex, 0.35);
+    var dark = shade(hex, -0.3), light = shade(hex, 0.25);
     if (!opts.ghost) { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 16, 12, 4, 0, 0, Math.PI * 2); ctx.fill(); }
-    box(ctx, -8 + step, 5, 7, 9, hex, 3); box(ctx, 1 - step, 5, 7, 9, hex, 3);
-    box(ctx, -9 + step, 11, 9, 5, '#e8e8ee', 2); box(ctx, 0 - step, 11, 9, 5, '#e8e8ee', 2);
+    if (look && L) L.back(ctx, look, T);
+    // piernas y botas
+    rr(ctx, -8 + step, 4, 7, 10, 3); ol(ctx, hex, 1.8);
+    rr(ctx, 1 - step, 4, 7, 10, 3); ol(ctx, hex, 1.8);
+    rr(ctx, -9.5 + step, 10.5, 9.5, 5.5, 2.5); ol(ctx, '#e8e8ee', 1.8);
+    rr(ctx, -0.5 - step, 10.5, 9.5, 5.5, 2.5); ol(ctx, '#e8e8ee', 1.8);
     ctx.translate(0, bob);
-    box(ctx, -17, -10, 8, 18, dark, 3);
-    box(ctx, -16, -8, 3, 6, light, 1);
-    ctx.fillStyle = dark;
-    ctx.beginPath(); ctx.ellipse(-10, 0 - step * 0.4, 3.5, 6, 0.3, 0, Math.PI * 2); ctx.fill();
-    var g = ctx.createLinearGradient(-11, -8, 11, 10);
-    g.addColorStop(0, light); g.addColorStop(1, hex);
-    ctx.fillStyle = g; rr(ctx, -11, -8, 22, 17, 6); ctx.fill();
-    ctx.strokeStyle = dark; ctx.lineWidth = 1.3; ctx.stroke();
-    ctx.fillStyle = dark; ctx.fillRect(-11, 4, 22, 2.5);
-    box(ctx, 1, -4, 8, 6, '#e8e8ee', 1.5);
-    circle(ctx, 3.5, -1, 1.2, '#e5484d'); circle(ctx, 6.5, -1, 1.2, '#30a46c');
-    ctx.fillStyle = hex;
-    ctx.beginPath(); ctx.ellipse(10, 0 + step * 0.4, 3.5, 6, -0.3, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = dark; ctx.stroke();
-    circle(ctx, 11, 5 + step * 0.4, 2.8, '#e8e8ee');
-    var hg = ctx.createRadialGradient(-4, -24, 2, 0, -18, 14);
-    hg.addColorStop(0, '#ffffff'); hg.addColorStop(1, '#cfd3e3');
-    circle(ctx, 0, -18, 13, hg);
-    ctx.strokeStyle = '#8890ad'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.strokeStyle = hex; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(0, -18, 11.5, Math.PI * 0.9, Math.PI * 1.35); ctx.stroke();
-    var vg = ctx.createLinearGradient(0, -27, 0, -9);
-    vg.addColorStop(0, '#2a4a8a'); vg.addColorStop(1, '#0f1d40');
-    circle(ctx, 3, -17, 9, vg);
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.ellipse(0.5, -17.5, 2.2, 2.8, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(6.5, -17.5, 2.2, 2.8, 0, 0, Math.PI * 2); ctx.fill();
-    circle(ctx, 1.2, -17, 1.1, '#111'); circle(ctx, 7.2, -17, 1.1, '#111');
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(3, -17, 6.5, Math.PI * 1.1, Math.PI * 1.45); ctx.stroke();
-    ctx.strokeStyle = '#8890ad'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(-6, -29); ctx.lineTo(-8, -35); ctx.stroke();
-    circle(ctx, -8, -36, 2.2, hex);
+    // mochila
+    rr(ctx, -18, -10, 9, 19, 3.5); ol(ctx, dark);
+    ctx.fillStyle = light; ctx.fillRect(-16.5, -8, 2.5, 6);
+    // brazo de atrás
+    ctx.beginPath(); ctx.ellipse(-10, 0 - step * 0.4, 3.6, 6.2, 0.3, 0, Math.PI * 2); ol(ctx, dark, 1.6);
+    // cuerpo (color plano con una banda de sombra)
+    rr(ctx, -11.5, -8.5, 23, 18, 6); ol(ctx, hex, 2.2);
+    ctx.save(); rr(ctx, -11.5, -8.5, 23, 18, 6); ctx.clip();
+    ctx.fillStyle = dark; ctx.fillRect(-11.5, 4, 23, 6);
+    ctx.fillStyle = light; ctx.fillRect(-8, -6.5, 4, 3);
     ctx.restore();
+    rr(ctx, -11.5, -8.5, 23, 18, 6); ctx.lineWidth = 2.2; ctx.strokeStyle = OUT; ctx.stroke();
+    rr(ctx, 1, -4.5, 8, 6.5, 1.5); ol(ctx, '#e8e8ee', 1.3);
+    circle(ctx, 3.5, -1.3, 1.2, '#e5484d'); circle(ctx, 6.5, -1.3, 1.2, '#30a46c');
+    if (look && L) L.body(ctx, look);
+    // brazo de delante y guante
+    ctx.beginPath(); ctx.ellipse(10, 0 + step * 0.4, 3.6, 6.2, -0.3, 0, Math.PI * 2); ol(ctx, hex, 1.6);
+    ctx.beginPath(); ctx.arc(11, 5.5 + step * 0.4, 2.9, 0, Math.PI * 2); ol(ctx, '#e8e8ee', 1.4);
+    // casco
+    ctx.beginPath(); ctx.arc(0, -18, 13, 0, Math.PI * 2); ol(ctx, '#f4f5fa', 2.4);
+    ctx.save(); ctx.beginPath(); ctx.arc(0, -18, 13, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = '#d3d7e6'; ctx.beginPath(); ctx.arc(-4, -12, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f4f5fa'; ctx.beginPath(); ctx.arc(-2, -21, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(0, -18, 13, 0, Math.PI * 2); ctx.lineWidth = 2.4; ctx.strokeStyle = OUT; ctx.stroke();
+    ctx.strokeStyle = hex; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, -18, 10.5, Math.PI * 0.95, Math.PI * 1.3); ctx.stroke();
+    // visera con cara
+    ctx.beginPath(); ctx.arc(3, -17, 9, 0, Math.PI * 2); ol(ctx, '#1d3466', 2);
+    ctx.fillStyle = '#2c4f94'; ctx.beginPath(); ctx.arc(1, -19, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0.5, -17.5, 2.3, 2.9, 0, 0, Math.PI * 2); ol(ctx, '#ffffff', 0.9);
+    ctx.beginPath(); ctx.ellipse(6.5, -17.5, 2.3, 2.9, 0, 0, Math.PI * 2); ol(ctx, '#ffffff', 0.9);
+    circle(ctx, 1.2, -17, 1.15, '#111'); circle(ctx, 7.2, -17, 1.15, '#111');
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.arc(3, -17, 6.3, Math.PI * 1.12, Math.PI * 1.45); ctx.stroke();
+    var hasHead = look && ((look.suit && look.suit !== 'none') || (look.hat && look.hat !== 'none'));
+    if (!hasHead) {
+      ctx.strokeStyle = OUT; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(-6, -30); ctx.lineTo(-8, -36); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-8, -37, 2.4, 0, Math.PI * 2); ol(ctx, hex, 1.3);
+    }
+    if (look && L) { L.head(ctx, look); L.hat(ctx, look, hex); }
+    ctx.restore();
+    if (look && L && !opts.ghost) L.fx(ctx, x, y, look, T, sc);
     if (opts.name) {
+      var top = (look && L ? L.topOf(look) : 37) + 3;
       ctx.save();
       ctx.font = 'bold ' + Math.round(11 * sc) + 'px system-ui, sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.75)';
       if (opts.ghost) ctx.globalAlpha = 0.6;
-      ctx.strokeText(opts.name, x, y - 39 * sc);
+      ctx.strokeText(opts.name, x, y - top * sc);
       ctx.fillStyle = opts.nameColor || '#fff';
-      ctx.fillText(opts.name, x, y - 39 * sc);
+      ctx.fillText(opts.name, x, y - top * sc);
       ctx.restore();
     }
   }
 
-  function frozen(ctx, x, y, hex, t) {
-    character(ctx, x, y, hex, {});
+  function frozen(ctx, x, y, hex, t, look) {
+    character(ctx, x, y, hex, { look: look, t: 0 });
     ctx.save();
     ctx.translate(x, y);
-    ctx.fillStyle = 'rgba(160,220,255,0.45)';
-    ctx.strokeStyle = 'rgba(220,245,255,0.9)';
-    ctx.lineWidth = 2;
-    rr(ctx, -21, -40, 42, 60, 6); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-    ctx.beginPath(); ctx.moveTo(-14, -30); ctx.lineTo(-5, -37); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-16, -18); ctx.lineTo(-11, -23); ctx.stroke();
+    ctx.fillStyle = 'rgba(160,220,255,0.5)';
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth = 2.2;
+    rr(ctx, -21, -42, 42, 62, 6); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-14, -32); ctx.lineTo(-5, -39); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-16, -20); ctx.lineTo(-11, -25); ctx.stroke();
     var sp = 0.5 + 0.5 * Math.sin((t || 0) * 4);
-    circle(ctx, 13, -30, 2, 'rgba(255,255,255,' + sp + ')');
+    circle(ctx, 13, -32, 2, 'rgba(255,255,255,' + sp + ')');
     ctx.restore();
   }
 
@@ -464,8 +482,13 @@
     c.style.width = size + 'px'; c.style.height = size + 'px';
     var ctx = c.getContext('2d');
     ctx.scale(dpr * size / 64, dpr * size / 64);
-    if (opts && opts.frozen) frozen(ctx, 32, 43, hex, 0);
-    else character(ctx, 32, 42, hex, { ghost: opts && opts.ghost, scale: 1.15 });
+    var look = opts && opts.look;
+    if (opts && opts.frozen) { ctx.translate(32, 50); ctx.scale(0.82, 0.82); frozen(ctx, 0, 0, hex, 0, look); }
+    else {
+      var tall = look && window.LOOKS ? window.LOOKS.topOf(look) : 37;
+      var s = Math.min(1.1, 52 / (tall + 18));
+      character(ctx, 32, 60 - 17 * s, hex, { ghost: opts && opts.ghost, scale: s, look: look, t: 0.3 });
+    }
     return c;
   }
 

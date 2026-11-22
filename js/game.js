@@ -2,6 +2,7 @@
    No toca la pantalla: la tele la dibuja y los móviles reciben "fotos" (snapshots) del estado. */
 (function (root) {
   var MAP = root.NAVE_MAP || require('./map.js');
+  function looks() { return root.LOOKS || (typeof require !== 'undefined' ? require('./disfraces.js') : null); }
 
   var COLORS = [
     { id: 'red', hex: '#e5484d' }, { id: 'blue', hex: '#3e7bfa' }, { id: 'green', hex: '#30a46c' },
@@ -177,7 +178,7 @@
       p.vent = null;
       p.meetingsLeft = self.settings.meetings;
       p.stats = { tasks: 0, freezes: 0 };
-      if (p.bot) p.level = p.level || (1 + Math.floor(Math.random() * 30));
+      if (p.bot) { p.level = p.level || (1 + Math.floor(Math.random() * 30)); if (looks() && !p.look) p.look = looks().randomFor(p.level); }
       p.freezeAt = 0; p.sabAt = 0;
       p.tasks = shuffle(taskIds.slice()).slice(0, self.settings.tasks).map(function (sid) { return { sid: sid, done: false }; });
       p.witness = {};
@@ -816,7 +817,7 @@
   // ---------- Lo que ve cada móvil ----------
   G.roster = function () {
     var out = {};
-    this.list().forEach(function (p) { out[p.id] = { n: p.name, c: p.color, b: p.bot ? 1 : 0, l: p.level || 1 }; });
+    this.list().forEach(function (p) { out[p.id] = { n: p.name, c: p.color, b: p.bot ? 1 : 0, l: p.level || 1, k: p.look || null }; });
     return out;
   };
   G.snapshot = function (pid) {
@@ -826,13 +827,13 @@
     s.host = this.hostPid();
     if (this.phase === 'lobby' || !p || !p.role) {
       s.ph = this.phase === 'lobby' ? 'lobby' : 'spectator';
-      s.players = this.humans().map(function (h) { return { id: h.id, n: h.name, c: h.color, on: h.connected, l: h.level || 1 }; });
+      s.players = this.humans().map(function (h) { return { id: h.id, n: h.name, c: h.color, on: h.connected, l: h.level || 1, k: h.look || null }; });
       s.settings = this.settings;
-      s.me = p ? { id: p.id, n: p.name, c: p.color } : null;
+      s.me = p ? { id: p.id, n: p.name, c: p.color, k: p.look || null } : null;
       return s;
     }
     s.me = {
-      id: p.id, n: p.name, c: p.color, role: p.role, ghost: this.isGhost(p), ejected: !!p.ejected,
+      id: p.id, n: p.name, c: p.color, k: p.look || null, role: p.role, ghost: this.isGhost(p), ejected: !!p.ejected,
       tasks: p.tasks.map(function (t) { return [t.sid, t.done ? 1 : 0]; })
     };
     if (p.role === 'imp') s.me.partners = this.list().filter(function (o) { return o.role === 'imp' && o !== p; }).map(function (o) { return o.name; });
@@ -840,7 +841,7 @@
       s.left = Math.ceil(this.phaseEnd - this.now);
       s.nImp = this.list().filter(function (o) { return o.role === 'imp'; }).length;
       // en fila: el tripulante ve a todos; el impostor, solo a los impostores
-      s.lineup = this.list().filter(function (o) { return p.role === 'crew' || o.role === 'imp'; }).map(function (o) { return [o.color, o.name, o === p ? 1 : 0]; });
+      s.lineup = this.list().filter(function (o) { return p.role === 'crew' || o.role === 'imp'; }).map(function (o) { return [o.color, o.name, o === p ? 1 : 0, o.look || null]; });
       return s;
     }
 
@@ -861,17 +862,17 @@
         if (og && (!ghost || o.ejected)) return;
         if (!og && !o.alive) return;
         if (!self.sees(p, o, 25)) return;
-        s.ps.push([Math.round(o.x), Math.round(o.y), o.color, o.name, og ? 1 : 0, (p.role === 'imp' && o.role === 'imp') ? 1 : 0]);
+        s.ps.push([Math.round(o.x), Math.round(o.y), o.color, o.name, og ? 1 : 0, (p.role === 'imp' && o.role === 'imp') ? 1 : 0, o.look || null]);
       });
       s.bd = [];
-      this.bodies.forEach(function (b) { if (self.sees(p, b, 25)) s.bd.push([Math.round(b.x), Math.round(b.y), self.players[b.id].color]); });
+      this.bodies.forEach(function (b) { if (self.sees(p, b, 25)) s.bd.push([Math.round(b.x), Math.round(b.y), self.players[b.id].color, self.players[b.id].look || null]); });
       // cámaras y mapa de administración (solo mientras se usan)
       if (p.busy === 'cam') {
         s.cams = MAP.cameras.map(function (c) {
           var list = [];
           self.list().forEach(function (o) {
             if (o.vent || self.isGhost(o) || dist(o, c) > CFG.camRange || !MAP.clear(c.x, c.y, o.x, o.y)) return;
-            list.push([Math.round(o.x), Math.round(o.y), o.color]);
+            list.push([Math.round(o.x), Math.round(o.y), o.color, o.look || null]);
           });
           var bodies = self.bodies.filter(function (b) { return dist(b, c) <= CFG.camRange && MAP.clear(c.x, c.y, b.x, b.y); })
             .map(function (b) { return [Math.round(b.x), Math.round(b.y), self.players[b.id].color]; });

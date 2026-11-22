@@ -197,7 +197,7 @@
     var ghost = game.isGhost(p);
     var c = document.createElement('div');
     c.className = 'mcard' + (ghost ? ' dead' : '');
-    c.appendChild(DRAW.avatarCanvas(COLORS[p.color].hex, Math.max(44, Math.round(window.innerWidth * 0.055)), { frozen: !p.alive && !p.ejected, ghost: p.ejected }));
+    c.appendChild(DRAW.avatarCanvas(COLORS[p.color].hex, Math.max(44, Math.round(window.innerWidth * 0.055)), { frozen: !p.alive && !p.ejected, ghost: p.ejected, look: p.look }));
     var n = document.createElement('div'); n.textContent = p.name; c.appendChild(n);
     if (extra) extra(c);
     return c;
@@ -239,7 +239,7 @@
     show('sEject');
     var stage = $('ejectStage'); stage.innerHTML = '';
     if (r.ejected) {
-      var a = DRAW.avatarCanvas(hex(r.ejected), Math.round(window.innerHeight * 0.22));
+      var a = DRAW.avatarCanvas(hex(r.ejected), Math.round(window.innerHeight * 0.22), { look: game.players[r.ejected].look });
       stage.appendChild(a);
       $('ejectText').textContent = t('tv.ejected', { name: name(r.ejected) });
       $('ejectSub').textContent = !r.confirm ? '' : (r.wasImp ? t('tv.wasImp', { name: name(r.ejected) }) : t('tv.wasNotImp', { name: name(r.ejected) }));
