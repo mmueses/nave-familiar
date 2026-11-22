@@ -6,10 +6,13 @@
   var lastScreen = null;
 
   // ---------- Pantallas ----------
+  var curScreen = null, tvSeen = null;
   function show(id) {
     ['sConnecting', 'sLobby', 'sIntro', 'sPlay', 'sMeeting', 'sEject', 'sEnd'].forEach(function (s) {
       $(s).classList.toggle('hidden', s !== id);
     });
+    if (curScreen !== id) { curScreen = id; var el = $(id); el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter'); }
+    if (window.FONDO) { if (id === 'sLobby' || id === 'sConnecting') FONDO.resume(); else FONDO.pause(); }
   }
 
   // ---------- Sonidos sencillos ----------
@@ -100,7 +103,8 @@
     }
     humans.forEach(function (h) {
       var card = document.createElement('div');
-      card.className = 'pcard' + (h.connected ? '' : ' off');
+      card.className = 'pcard' + (h.connected ? '' : ' off') + (tvSeen && !tvSeen[h.id] ? ' jump' : '');
+      tvSeen = tvSeen || {}; tvSeen[h.id] = 1;
       card.appendChild(DRAW.avatarCanvas(COLORS[h.color].hex, Math.max(48, Math.round(window.innerWidth * 0.06)), { look: h.look }));
       var n = document.createElement('div'); n.textContent = h.name; card.appendChild(n);
       var lv = document.createElement('div'); lv.className = 'lvl'; lv.textContent = t('xp.short', { n: h.level || 1 }); card.appendChild(lv);
@@ -281,6 +285,7 @@
     r.imps.forEach(function (id) { var cc = card(game.players[id]); cc.classList.remove('dead'); cc.style.borderColor = '#e5484d'; box.appendChild(cc); });
     $('endTime').textContent = t('tv.time') + ': ' + Math.floor(r.time / 60) + ':' + ('0' + (r.time % 60)).slice(-2);
     setTimeout(function () { try { $('btnAgain').focus(); } catch (e) {} }, 300);
+    if (window.EFX) { if (r.winner === 'crew') EFX.confetti(); else EFX.snow(); }
   }
 
   function frame(ms) {
@@ -310,4 +315,5 @@
   // para pruebas automáticas
   window.__game = game;
   window.__server = server;
+  if (window.FONDO) FONDO.start({ parade: true, lane: [0.9, 0.99] });
 })();

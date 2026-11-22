@@ -33,6 +33,8 @@
     if (screen === id) return;
     screen = id;
     SCREENS.forEach(function (x) { $(x).classList.toggle('hidden', x !== id); });
+    var el = $(id); el.classList.remove('enter'); if (id !== 'sPlay') { void el.offsetWidth; el.classList.add('enter'); }
+    if (window.FONDO) { if (id === 'sPlay') FONDO.pause(); else FONDO.resume(); }
     if (id !== 'sPlay') { closePanel(); $('mapModal').classList.add('hidden'); resetJoy(); }
     if (id !== 'sMeeting') $('splash').classList.add('hidden');
   }
@@ -189,6 +191,7 @@
   }
 
   // ---------- Sala de espera ----------
+  var seenIds = null;
   function renderLobby() {
     show('sLobby');
     renderRoom();
@@ -206,6 +209,8 @@
       var list = $('lobbyList'); list.innerHTML = '';
       s.players.forEach(function (p) {
         var d = document.createElement('div');
+        if (seenIds && !seenIds[p.id]) d.className = 'jump';
+        seenIds = seenIds || {}; seenIds[p.id] = 1;
         d.appendChild(DRAW.avatarCanvas(hexOf(p.c), 52, { look: p.k }));
         var nm = document.createElement('span'); nm.textContent = p.n; d.appendChild(nm);
         var lv = document.createElement('span'); lv.className = 'lvl'; lv.textContent = t('xp.short', { n: p.l || 1 }); d.appendChild(lv);
@@ -256,6 +261,7 @@
         send({ t: 'look', look: nl });
         uiKey.lobby = null;
         renderWardrobe();
+        var pv = $('lookPreview'); pv.classList.remove('swap'); void pv.offsetWidth; pv.classList.add('swap');
       };
       grid.appendChild(b);
     });
@@ -750,7 +756,9 @@
       t('ph.impWas', { names: r.imps.map(rname).join(', ') });
     $('btnLobby').classList.toggle('hidden', s.host !== pid);
     awardXp();
+    if (window.EFX && endFx !== s.res) { endFx = s.res; if (s.iWon) EFX.confetti(); else EFX.snow(); }
   }
+  var endFx = null;
   // Experiencia al terminar la partida (se guarda en este móvil)
   function awardXp() {
     var st = s.stats || { tasks: 0, freezes: 0 };
@@ -770,7 +778,8 @@
     $('xpGain').textContent = t('xp.gained', { n: g2 });
     $('xpLevel').textContent = up ? t('xp.levelUp', { n: li.level }) : t('xp.level', { n: li.level });
     $('xpLevel').className = up ? 'levelUp' : '';
-    $('xpFill').style.width = Math.round(li.into / li.need * 100) + '%';
+    var pct = Math.round(li.into / li.need * 100) + '%';
+    if ($('xpFill').dataset.done !== pct) { $('xpFill').dataset.done = pct; $('xpFill').style.width = '0%'; setTimeout(function () { $('xpFill').style.width = pct; }, 250); }
     $('xpNext').textContent = t('xp.next', { n: li.need - li.into, m: li.level + 1 });
   }
   $('btnLobby').onclick = function () { send({ t: 'lobby' }); };
@@ -790,4 +799,5 @@
   window.addEventListener('beforeunload', function () { if (joinedOnce && code) try { sessionStorage.setItem('nave.joined', code); } catch (e) {} });
 
   window.__phone = { get s() { return s; }, send: send, get screen() { return screen; }, pid: pid, act: act };
+  if (window.FONDO) FONDO.start({ parade: false });
 })();

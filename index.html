@@ -2,56 +2,70 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Sneaky One</title>
-<link rel="stylesheet" href="css/estilo.css?v=17">
+<link rel="stylesheet" href="css/estilo.css?v=18">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icono-192.png">
-<link rel="apple-touch-icon" href="icons/icono-apple-180.png">
+<link rel="icon" href="icons/icono2-192.png">
+<link rel="apple-touch-icon" href="icons/icono2-apple-180.png">
 <meta name="theme-color" content="#0b1026">
 </head>
 <body>
 <div class="screen home">
-  <h1 data-i18n="app.title">The Sneaky One</h1>
-  <div class="muted" data-i18n="app.subtitle"></div>
-  <a class="card" id="toSolo" href="movil.html?crear=1">
-    <b>🎮 <span data-i18n="home.solo"></span></b>
-    <span class="muted" data-i18n="home.soloHint"></span>
-  </a>
-  <a class="card" id="toPhone" href="movil.html">
-    <b>📱 <span data-i18n="home.phone"></span></b>
-    <span class="muted" data-i18n="home.phoneHint"></span>
-  </a>
-  <a class="card" id="toTv" href="tele.html">
-    <b>📺 <span data-i18n="home.tv"></span></b>
-    <span class="muted" data-i18n="home.tvHint"></span>
-  </a>
-  <div class="row">
-    <button class="big hidden" id="btnInstall" data-i18n="app.install"></button>
-    <button class="sec" id="btnShare" data-i18n="app.share"></button>
+  <div class="logo" id="logo" aria-label="The Sneaky One"></div>
+  <div class="tagline" data-i18n="app.subtitle"></div>
+  <div class="menu">
+    <a class="mbtn green" id="toSolo" href="movil.html?crear=1" style="--d:0.15s">
+      <span class="mico">🎮</span><span class="mtxt"><b data-i18n="home.solo"></b><small data-i18n="home.soloHint"></small></span><span class="marrow">›</span>
+    </a>
+    <a class="mbtn blue" id="toPhone" href="movil.html" style="--d:0.3s">
+      <span class="mico">📱</span><span class="mtxt"><b data-i18n="home.phone"></b><small data-i18n="home.phoneHint"></small></span><span class="marrow">›</span>
+    </a>
+    <a class="mbtn pink" id="toTv" href="tele.html" style="--d:0.45s">
+      <span class="mico">📺</span><span class="mtxt"><b data-i18n="home.tv"></b><small data-i18n="home.tvHint"></small></span><span class="marrow">›</span>
+    </a>
+  </div>
+  <div class="footbar">
+    <button class="rbtn" id="btnLang" aria-label="Idioma / Language"><span>🌐</span><small id="langTxt">ES</small></button>
+    <button class="rbtn" id="btnShare" aria-label="Compartir"><span>📤</span><small data-i18n="home.shareShort"></small></button>
+    <button class="rbtn hidden" id="btnInstall" aria-label="Instalar"><span>📲</span><small data-i18n="home.installShort"></small></button>
   </div>
   <div class="muted small hidden" id="installHelp" data-i18n="app.installHelp" style="max-width:420px"></div>
   <div class="muted small hidden" id="shareMsg" style="max-width:420px"></div>
-  <div class="row"><span data-i18n="lang.label"></span>
-    <div class="seg"><button data-l="es">Español</button><button data-l="en">English</button></div>
-  </div>
-  <div class="muted small" style="margin-top:8px">v17</div>
+  <div class="ver">v18</div>
 </div>
-<script src="js/i18n.js?v=17"></script>
+<script src="js/personajes-data.js?v=18"></script>
+<script src="js/fondo.js?v=18"></script>
+<script src="js/i18n.js?v=18"></script>
 <script>
   (function () {
     var q = location.search;
     // Si llega con código (QR), ir directo al móvil
     if (/[?&]sala=/.test(q)) { location.replace('movil.html' + q); return; }
     if (q) { document.getElementById('toTv').href += q; document.getElementById('toPhone').href += q; document.getElementById('toSolo').href += '&' + q.slice(1); }
-    function paint() {
-      I18N.apply();
-      document.querySelectorAll('[data-l]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-l') === I18N.lang); });
+    // Título con letras sueltas: rebotan al entrar y de vez en cuando una «se esconde» (como el impostor)
+    function logo() {
+      var el = document.getElementById('logo'), txt = t('app.title'), i = 0; el.innerHTML = '';
+      txt.split(' ').forEach(function (word, wi) {
+        var w = document.createElement('span'); w.className = 'word w' + (wi % 3);
+        word.split('').forEach(function (ch) { var sp = document.createElement('span'); sp.className = 'ch'; sp.textContent = ch; sp.style.setProperty('--i', i++); w.appendChild(sp); });
+        el.appendChild(w);
+      });
     }
-    document.querySelectorAll('[data-l]').forEach(function (b) {
-      b.onclick = function () { I18N.set(b.getAttribute('data-l')); paint(); };
-    });
+    setInterval(function () {
+      var ls = document.querySelectorAll('#logo .ch'); if (!ls.length) return;
+      var l = ls[Math.floor(Math.random() * ls.length)]; l.classList.add('sneak');
+      setTimeout(function () { l.classList.remove('sneak'); }, 1600);
+    }, 3500);
+    function paint() {
+      I18N.apply(); logo();
+      document.getElementById('langTxt').textContent = I18N.lang.toUpperCase();
+    }
+    document.getElementById('btnLang').onclick = function () { I18N.set(I18N.lang === 'es' ? 'en' : 'es'); paint(); };
     paint();
+    FONDO.start({ parade: true, lane: [0.93, 0.99] });
+    document.querySelectorAll('.mbtn, .rbtn').forEach(function (b) { b.addEventListener('pointerdown', function () { try { navigator.vibrate && navigator.vibrate(15); } catch (e) {} }); });
     document.getElementById('toSolo').focus();
     // Instalar como app (Android: Chrome ofrece el aviso; si no, se explica cómo hacerlo a mano)
     var installEvt = null, $ = function (id) { return document.getElementById(id); };

@@ -2,7 +2,7 @@
 (function (root) {
   var TEXTS = {
     es: {
-      'app.title': 'The Sneaky One',
+      'app.title': 'The Sneaky One', 'home.shareShort': 'Compartir', 'home.installShort': 'Instalar',
       'app.subtitle': 'Juego de impostores para jugar en familia',
       'home.tv': 'Soy la TELE',
       'home.tvHint': 'Pantalla común: mapa, votaciones y resultados',
@@ -195,7 +195,7 @@
       'mg.done': '¡Hecho!'
     },
     en: {
-      'app.title': 'The Sneaky One',
+      'app.title': 'The Sneaky One', 'home.shareShort': 'Share', 'home.installShort': 'Install',
       'app.subtitle': 'An impostor game to play with your family',
       'home.tv': 'I am the TV',
       'home.tvHint': 'Shared screen: map, voting and results',
