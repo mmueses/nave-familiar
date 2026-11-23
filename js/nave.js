@@ -49,16 +49,18 @@
   tex('security', 'img/mapas/nave-seguridad-suelo.webp?v=1', 320);
   ['cama', 'escaner', 'armario', 'gotero', 'mesa', 'carrito'].forEach(function (n) { prop('enfermeria-' + n, 'nave-enfermeria-' + n + '.webp'); });
   ['mesa', 'silla', 'servidor', 'archivador', 'cafe', 'taquilla'].forEach(function (n) { prop('seguridad-' + n, 'nave-seguridad-' + n + '.webp'); });
+  var USE_ISO = false;   // muebles en diagonal (isométricos) de B6 y B8: no encajan con la vista de frente del mapa
   var MED_PROPS = ['enfermeria-cama', 'enfermeria-escaner', 'enfermeria-armario', 'enfermeria-gotero', 'enfermeria-carrito'];
   var SEC_PROPS = ['seguridad-mesa', 'seguridad-silla', 'seguridad-servidor', 'seguridad-archivador', 'seguridad-cafe', 'seguridad-taquilla'];
-  var REACTOR_PROPS = ['reactor-nucleo', 'reactor-tanques', 'reactor-tubos', 'reactor-barril', 'reactor-refrigerador'];
+  var REACTOR_PROPS = ['reactor-nucleo', 'reactor-tanques', 'reactor-barril'];
   var ENG_T = null;   // turbina de Motores (dónde se dibuja, para animarla encima)
-  var ENGINE_PROPS = ['motores-turbina', 'motores-deposito', 'motores-medidores', 'motores-herramientas', 'motores-cajas', 'motores-banco'];
+  var ENGINE_PROPS = ['motores-turbina', 'motores-deposito'];
   function hasProps(list) { for (var i = 0; i < list.length; i++) if (!TEX[list[i]] || !TEX[list[i]].ok) return false; return true; }
+  var PROP_SHADOWS = false;   // 23-11: sin sombras pintadas por código (no convencían); el dibujo ya apoya en el suelo
   function drawProp(c, id, x, y, w, shadowOn) {
     var T = TEX[id]; if (!T || !T.ok) return false;
     var h = w * T.img.height / T.img.width;
-    if (shadowOn !== false && T.sh) {
+    if (PROP_SHADOWS && shadowOn !== false && T.sh) {
       // sombra de apoyo: la silueta del objeto aplastada justo debajo de su base (luz desde arriba, como en Among Us)
       var k = w / T.img.width, pad = T.sh.pad * k, sh = (h + pad * 2) * 0.2;
       c.save(); c.globalAlpha = 0.5;
@@ -502,7 +504,7 @@
     }
     // Enfermería: camillas, armario de medicinas, gotero
     r = R('medbay');
-    if (hasProps(MED_PROPS)) {   // muebles de Gemini (B6)
+    if (USE_ISO && hasProps(MED_PROPS)) {   // muebles de Gemini (B6), en diagonal: desactivados
       drawProp(c, 'enfermeria-gotero', r.x + 52, r.y + 90, 16);     // junto a la primera cama
       drawProp(c, 'enfermeria-cama', r.x + 82, r.y + 92, 54);       // dos camas en fila bajo el monitor
       drawProp(c, 'enfermeria-cama', r.x + 140, r.y + 92, 54);
@@ -513,7 +515,7 @@
       box(c, r.x + 137, y + 3, 17, 20, '#ffffff', 4, { lw: 1.2 });
       box(c, r.x + 85, y + 16, 50, 10, '#6fd0e0', 3, { lw: 1.2 });
     });
-    if (!hasProps(MED_PROPS)) {
+    if (!(USE_ISO && hasProps(MED_PROPS))) {
       box(c, r.x + 172, r.y + 72, 22, 30, '#ffffff', 3); c.fillStyle = '#e5484d'; c.fillRect(r.x + 180, r.y + 78, 6, 16); c.fillRect(r.x + 175, r.y + 83, 16, 6);
       c.strokeStyle = OUT; c.lineWidth = 2; c.beginPath(); c.moveTo(r.x + 70, r.y + 50); c.lineTo(r.x + 70, r.y + 85); c.stroke();
       box(c, r.x + 64, r.y + 44, 12, 14, 'rgba(160,220,255,0.85)', 4, { lw: 1.4 });
@@ -539,8 +541,6 @@
     c.lineWidth = 8; c.strokeStyle = OUT; c.beginPath(); c.moveTo(r.x + 60, r.y + 10); c.lineTo(r.x + r.w - 60, r.y + 10); c.lineTo(r.x + r.w - 60, r.y + 70); c.stroke();
     c.lineWidth = 5; c.strokeStyle = '#d0703a'; c.stroke();
     if (engImg) {   // muebles de Gemini (B4)
-      drawProp(c, 'motores-medidores', r.x + 94, r.y + 36, 54);     // pared de arriba, entre la tarea y la puerta
-      drawProp(c, 'motores-cajas', r.x + 216, r.y + 184, 40);       // pared derecha, bajo la puerta del pasillo
       drawProp(c, 'motores-deposito', r.x + 18, r.y + 186, 22);     // pared izquierda, junto a la turbina
       drawProp(c, 'motores-turbina', ENG_T.x, ENG_T.b, ENG_T.w);    // esquina de abajo a la izquierda
     } else {
@@ -555,15 +555,13 @@
     c.lineWidth = 3; c.strokeStyle = '#4a5a8a';
     [[r.x + 60, r.y + 40], [r.x + 180, r.y + 60], [r.x + 180, r.y + 190]].forEach(function (p) { c.beginPath(); c.moveTo(r.x + 110, r.y + 155); c.lineTo(p[0], p[1]); c.stroke(); });
     if (hasProps(REACTOR_PROPS)) {   // muebles de Gemini (B2)
-      drawProp(c, 'reactor-tubos', r.x + 95, r.y + 36, 44);        // pared de arriba, entre la tarea y la rejilla
       drawProp(c, 'reactor-tanques', r.x + 22, r.y + 126, 32);     // pared izquierda, entre las dos tareas
       drawProp(c, 'reactor-barril', r.x + 184, r.y + 156, 18);     // pared derecha, bajo la puerta
-      drawProp(c, 'reactor-refrigerador', r.x + 186, r.y + 198, 24);
       drawProp(c, 'reactor-nucleo', r.x + 110, r.y + 192, 100);
     } else circ(c, r.x + 110, r.y + 155, 40, '#2a2040', 3);
     // Seguridad: sillón y archivo de cintas
     r = R('security');
-    if (hasProps(SEC_PROPS)) {   // muebles de Gemini (B8)
+    if (USE_ISO && hasProps(SEC_PROPS)) {   // muebles de Gemini (B8), en diagonal: desactivados
       drawProp(c, 'seguridad-servidor', r.x + 98, r.y + 36, 22);    // pared de arriba, entre las cámaras y la rejilla
       drawProp(c, 'seguridad-archivador', r.x + 120, r.y + 34, 16);
       drawProp(c, 'seguridad-silla', r.x + 50, r.y + 72, 18);       // delante de la consola de cámaras
@@ -1010,7 +1008,7 @@
       var x = it[1], y = it[2];
       if (it[0] === 'barrels' && x < 230 && hasProps(REACTOR_PROPS)) return false;
       if (it[0] === 'toolbox' && x < 540 && y < 570 && hasProps(ENGINE_PROPS)) return false;
-      if ((it[0] === 'plant' || it[0] === 'locker') && x > 580 && x < 750 && y < 360 && hasProps(SEC_PROPS)) return false;
+      if ((it[0] === 'plant' || it[0] === 'locker') && x > 580 && x < 750 && y < 360 && USE_ISO && hasProps(SEC_PROPS)) return false;
       return true;
     }));
     wallLamps(c, MAP.id !== 'abisal');
