@@ -52,22 +52,23 @@
   var MED_PROPS = ['enfermeria-cama', 'enfermeria-escaner', 'enfermeria-armario', 'enfermeria-gotero', 'enfermeria-carrito'];
   var SEC_PROPS = ['seguridad-mesa', 'seguridad-silla', 'seguridad-servidor', 'seguridad-archivador', 'seguridad-cafe', 'seguridad-taquilla'];
   var REACTOR_PROPS = ['reactor-nucleo', 'reactor-tanques', 'reactor-tubos', 'reactor-barril', 'reactor-refrigerador'];
+  var ENG_T = null;   // turbina de Motores (dónde se dibuja, para animarla encima)
   var ENGINE_PROPS = ['motores-turbina', 'motores-deposito', 'motores-medidores', 'motores-herramientas', 'motores-cajas', 'motores-banco'];
   function hasProps(list) { for (var i = 0; i < list.length; i++) if (!TEX[list[i]] || !TEX[list[i]].ok) return false; return true; }
   function drawProp(c, id, x, y, w, shadowOn) {
     var T = TEX[id]; if (!T || !T.ok) return false;
     var h = w * T.img.height / T.img.width;
     if (shadowOn !== false && T.sh) {
-      // sombra proyectada: pegada a la base y tumbada hacia la derecha y atrás (luz desde la izquierda)
-      var k = w / T.img.width, pad = T.sh.pad * k;
-      c.save(); c.translate(x, y - 1); c.transform(1, 0, -0.75, 0.28, 0, 0); c.globalAlpha = 0.42;
-      c.drawImage(T.sh, -w / 2 - pad, -h - pad, w + pad * 2, h + pad * 2);
+      // sombra de apoyo: la silueta del objeto aplastada justo debajo de su base (luz desde arriba, como en Among Us)
+      var k = w / T.img.width, pad = T.sh.pad * k, sh = (h + pad * 2) * 0.2;
+      c.save(); c.globalAlpha = 0.5;
+      c.drawImage(T.sh, x - w / 2 - pad * 1.2, y - sh * 0.62, w + pad * 2.4, sh);
       c.restore();
-      // oscuridad de contacto justo donde el objeto toca el suelo (queda casi toda tapada por el objeto)
-      var cy = y - 3, rx = w * 0.46;
+      // oscuridad de contacto justo donde el objeto toca el suelo
+      var cy = y - 2, rx = w * 0.42;
       var g = c.createRadialGradient(x, cy, 0, x, cy, rx);
-      g.addColorStop(0, 'rgba(0,0,0,0.55)'); g.addColorStop(0.7, 'rgba(0,0,0,0.25)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-      c.save(); c.translate(x, cy); c.scale(1, 0.18); c.translate(-x, -cy);
+      g.addColorStop(0, 'rgba(0,0,0,0.45)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.save(); c.translate(x, cy); c.scale(1, 0.16); c.translate(-x, -cy);
       c.fillStyle = g; c.beginPath(); c.arc(x, cy, rx, 0, Math.PI * 2); c.fill(); c.restore();
     }
     c.drawImage(T.img, x - w / 2, y - h, w, h);
@@ -502,12 +503,11 @@
     // Enfermería: camillas, armario de medicinas, gotero
     r = R('medbay');
     if (hasProps(MED_PROPS)) {   // muebles de Gemini (B6)
-      drawProp(c, 'enfermeria-armario', r.x + 184, r.y + 92, 26);
-      drawProp(c, 'enfermeria-gotero', r.x + 72, r.y + 92, 14);
-      drawProp(c, 'enfermeria-cama', r.x + 122, r.y + 88, 70);
-      drawProp(c, 'enfermeria-cama', r.x + 122, r.y + 140, 70);
-      drawProp(c, 'enfermeria-escaner', r.x + 38, r.y + 150, 54);
-      drawProp(c, 'enfermeria-carrito', r.x + 72, r.y + 150, 24);
+      drawProp(c, 'enfermeria-gotero', r.x + 52, r.y + 90, 16);     // junto a la primera cama
+      drawProp(c, 'enfermeria-cama', r.x + 82, r.y + 92, 54);       // dos camas en fila bajo el monitor
+      drawProp(c, 'enfermeria-cama', r.x + 140, r.y + 92, 54);
+      drawProp(c, 'enfermeria-escaner', r.x + 30, r.y + 128, 44);    // pared izquierda, lejos de la puerta de abajo
+      drawProp(c, 'enfermeria-armario', r.x + 124, r.y + 156, 22);   // pared de abajo, junto a la tarea del botiquín
     } else [r.y + 46, r.y + 90].forEach(function (y) {
       box(c, r.x + 85, y, 72, 26, '#eef0f6', 5);
       box(c, r.x + 137, y + 3, 17, 20, '#ffffff', 4, { lw: 1.2 });
@@ -534,16 +534,15 @@
     // Motores: base de turbina, tuberías y medidores
     r = R('engines');
     var engImg = hasProps(ENGINE_PROPS);
+    ENG_T = { x: r.x + 44, b: r.y + 236, w: 70 };
     if (!engImg) { circ(c, r.x + 52 + 3, r.y + 192 + 5, 36, 'rgba(0,0,0,0.3)'); circ(c, r.x + 52, r.y + 192, 36, '#2b2440', 3); }
     c.lineWidth = 8; c.strokeStyle = OUT; c.beginPath(); c.moveTo(r.x + 60, r.y + 10); c.lineTo(r.x + r.w - 60, r.y + 10); c.lineTo(r.x + r.w - 60, r.y + 70); c.stroke();
     c.lineWidth = 5; c.strokeStyle = '#d0703a'; c.stroke();
     if (engImg) {   // muebles de Gemini (B4)
-      drawProp(c, 'motores-medidores', r.x + 136, r.y + 52, 64);
-      drawProp(c, 'motores-banco', r.x + 150, r.y + 120, 50);
-      drawProp(c, 'motores-deposito', r.x + 222, r.y + 112, 28);
-      drawProp(c, 'motores-cajas', r.x + 182, r.y + 186, 50);
-      drawProp(c, 'motores-turbina', r.x + 52, r.y + 224, 94);
-      drawProp(c, 'motores-herramientas', r.x + 118, r.y + 232, 32);
+      drawProp(c, 'motores-medidores', r.x + 94, r.y + 36, 54);     // pared de arriba, entre la tarea y la puerta
+      drawProp(c, 'motores-cajas', r.x + 216, r.y + 184, 40);       // pared derecha, bajo la puerta del pasillo
+      drawProp(c, 'motores-deposito', r.x + 18, r.y + 186, 22);     // pared izquierda, junto a la turbina
+      drawProp(c, 'motores-turbina', ENG_T.x, ENG_T.b, ENG_T.w);    // esquina de abajo a la izquierda
     } else {
       for (i = 0; i < 3; i++) { circ(c, r.x + 110 + i * 26, r.y + 30, 8, '#eef0f6', 1.6); c.strokeStyle = '#e5484d'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(r.x + 110 + i * 26, r.y + 30); c.lineTo(r.x + 114 + i * 26, r.y + 25); c.stroke(); }
       box(c, r.x + 160, r.y + 140, 50, 40, '#4a4060', 4); box(c, r.x + 166, r.y + 146, 38, 12, '#ff9a4a', 2, { lw: 1 });
@@ -556,21 +555,20 @@
     c.lineWidth = 3; c.strokeStyle = '#4a5a8a';
     [[r.x + 60, r.y + 40], [r.x + 180, r.y + 60], [r.x + 180, r.y + 190]].forEach(function (p) { c.beginPath(); c.moveTo(r.x + 110, r.y + 155); c.lineTo(p[0], p[1]); c.stroke(); });
     if (hasProps(REACTOR_PROPS)) {   // muebles de Gemini (B2)
-      drawProp(c, 'reactor-tubos', r.x + 70, r.y + 62, 46);
-      drawProp(c, 'reactor-tanques', r.x + 178, r.y + 84, 40);
-      drawProp(c, 'reactor-refrigerador', r.x + 182, r.y + 196, 28);
-      drawProp(c, 'reactor-barril', r.x + 186, r.y + 140, 20);
+      drawProp(c, 'reactor-tubos', r.x + 95, r.y + 36, 44);        // pared de arriba, entre la tarea y la rejilla
+      drawProp(c, 'reactor-tanques', r.x + 22, r.y + 126, 32);     // pared izquierda, entre las dos tareas
+      drawProp(c, 'reactor-barril', r.x + 184, r.y + 156, 18);     // pared derecha, bajo la puerta
+      drawProp(c, 'reactor-refrigerador', r.x + 186, r.y + 198, 24);
       drawProp(c, 'reactor-nucleo', r.x + 110, r.y + 192, 100);
     } else circ(c, r.x + 110, r.y + 155, 40, '#2a2040', 3);
     // Seguridad: sillón y archivo de cintas
     r = R('security');
     if (hasProps(SEC_PROPS)) {   // muebles de Gemini (B8)
-      drawProp(c, 'seguridad-mesa', r.x + 108, r.y + 48, 66);
-      drawProp(c, 'seguridad-servidor', r.x + 156, r.y + 104, 22);
-      drawProp(c, 'seguridad-silla', r.x + 104, r.y + 72, 20);
-      drawProp(c, 'seguridad-taquilla', r.x + 16, r.y + 104, 20);
-      drawProp(c, 'seguridad-cafe', r.x + 62, r.y + 104, 30);
-      drawProp(c, 'seguridad-archivador', r.x + 132, r.y + 104, 18);
+      drawProp(c, 'seguridad-servidor', r.x + 98, r.y + 36, 22);    // pared de arriba, entre las cámaras y la rejilla
+      drawProp(c, 'seguridad-archivador', r.x + 120, r.y + 34, 16);
+      drawProp(c, 'seguridad-silla', r.x + 50, r.y + 72, 18);       // delante de la consola de cámaras
+      drawProp(c, 'seguridad-taquilla', r.x + 14, r.y + 106, 18);   // esquinas de abajo, lejos de la puerta
+      drawProp(c, 'seguridad-cafe', r.x + 152, r.y + 106, 26);
     } else {
       circ(c, r.x + 50, r.y + 64, 11, '#3a4a7a', 1.8); box(c, r.x + 40, r.y + 72, 20, 8, '#2a3a6a', 3, { lw: 1.4 });
       box(c, r.x + 124, r.y + 58, 34, 34, '#3a3f55', 3); for (i = 0; i < 3; i++) box(c, r.x + 128, r.y + 62 + i * 10, 26, 6, '#1a1a2e', 1, { lw: 0.8 });
@@ -639,9 +637,10 @@
     // Motores: turbina girando y chispas
     r = R('engines');
     var cx = r.x + 52, cy = r.y + 192;
+    if (ENG_T && hasProps(ENGINE_PROPS)) { cx = ENG_T.x; cy = ENG_T.b - ENG_T.w * 0.42; }
     if (hasProps(ENGINE_PROPS)) {   // estelas girando encima de la turbina dibujada
-      c.save(); c.translate(cx, cy + 2); c.scale(1, 0.55); c.rotate(t * 6); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 3;
-      for (i = 0; i < 3; i++) { c.rotate(Math.PI * 2 / 3); c.beginPath(); c.arc(0, 0, 26, 0, 0.9); c.stroke(); }
+      c.save(); c.translate(cx, cy); c.scale(1, 0.55); c.rotate(t * 6); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 2.5;
+      for (i = 0; i < 3; i++) { c.rotate(Math.PI * 2 / 3); c.beginPath(); c.arc(0, 0, 20, 0, 0.9); c.stroke(); }
       c.restore();
     } else {
       var glow = c.createRadialGradient(cx, cy, 4, cx, cy, 31); glow.addColorStop(0, 'rgba(255,200,100,0.95)'); glow.addColorStop(1, 'rgba(255,90,40,0.15)');
