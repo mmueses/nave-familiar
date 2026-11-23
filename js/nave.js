@@ -46,6 +46,11 @@
   tex('medbay', 'img/mapas/nave-enfermeria-suelo.webp?v=1', 176);
   ['nucleo', 'consola', 'tanques', 'tubos', 'barril', 'refrigerador'].forEach(function (n) { prop('reactor-' + n, 'nave-reactor-' + n + '.webp'); });
   ['turbina', 'deposito', 'medidores', 'herramientas', 'cajas', 'banco'].forEach(function (n) { prop('motores-' + n, 'nave-motores-' + n + '.webp'); });
+  tex('security', 'img/mapas/nave-seguridad-suelo.webp?v=1', 320);
+  ['cama', 'escaner', 'armario', 'gotero', 'mesa', 'carrito'].forEach(function (n) { prop('enfermeria-' + n, 'nave-enfermeria-' + n + '.webp'); });
+  ['mesa', 'silla', 'servidor', 'archivador', 'cafe', 'taquilla'].forEach(function (n) { prop('seguridad-' + n, 'nave-seguridad-' + n + '.webp'); });
+  var MED_PROPS = ['enfermeria-cama', 'enfermeria-escaner', 'enfermeria-armario', 'enfermeria-gotero', 'enfermeria-carrito'];
+  var SEC_PROPS = ['seguridad-mesa', 'seguridad-silla', 'seguridad-servidor', 'seguridad-archivador', 'seguridad-cafe', 'seguridad-taquilla'];
   var REACTOR_PROPS = ['reactor-nucleo', 'reactor-tanques', 'reactor-tubos', 'reactor-barril', 'reactor-refrigerador'];
   var ENGINE_PROPS = ['motores-turbina', 'motores-deposito', 'motores-medidores', 'motores-herramientas', 'motores-cajas', 'motores-banco'];
   function hasProps(list) { for (var i = 0; i < list.length; i++) if (!TEX[list[i]] || !TEX[list[i]].ok) return false; return true; }
@@ -496,14 +501,23 @@
     }
     // Enfermería: camillas, armario de medicinas, gotero
     r = R('medbay');
-    [r.y + 46, r.y + 90].forEach(function (y) {
+    if (hasProps(MED_PROPS)) {   // muebles de Gemini (B6)
+      drawProp(c, 'enfermeria-armario', r.x + 184, r.y + 92, 26);
+      drawProp(c, 'enfermeria-gotero', r.x + 72, r.y + 92, 14);
+      drawProp(c, 'enfermeria-cama', r.x + 122, r.y + 88, 70);
+      drawProp(c, 'enfermeria-cama', r.x + 122, r.y + 140, 70);
+      drawProp(c, 'enfermeria-escaner', r.x + 38, r.y + 150, 54);
+      drawProp(c, 'enfermeria-carrito', r.x + 72, r.y + 150, 24);
+    } else [r.y + 46, r.y + 90].forEach(function (y) {
       box(c, r.x + 85, y, 72, 26, '#eef0f6', 5);
       box(c, r.x + 137, y + 3, 17, 20, '#ffffff', 4, { lw: 1.2 });
       box(c, r.x + 85, y + 16, 50, 10, '#6fd0e0', 3, { lw: 1.2 });
     });
-    box(c, r.x + 172, r.y + 72, 22, 30, '#ffffff', 3); c.fillStyle = '#e5484d'; c.fillRect(r.x + 180, r.y + 78, 6, 16); c.fillRect(r.x + 175, r.y + 83, 16, 6);
-    c.strokeStyle = OUT; c.lineWidth = 2; c.beginPath(); c.moveTo(r.x + 70, r.y + 50); c.lineTo(r.x + 70, r.y + 85); c.stroke();
-    box(c, r.x + 64, r.y + 44, 12, 14, 'rgba(160,220,255,0.85)', 4, { lw: 1.4 });
+    if (!hasProps(MED_PROPS)) {
+      box(c, r.x + 172, r.y + 72, 22, 30, '#ffffff', 3); c.fillStyle = '#e5484d'; c.fillRect(r.x + 180, r.y + 78, 6, 16); c.fillRect(r.x + 175, r.y + 83, 16, 6);
+      c.strokeStyle = OUT; c.lineWidth = 2; c.beginPath(); c.moveTo(r.x + 70, r.y + 50); c.lineTo(r.x + 70, r.y + 85); c.stroke();
+      box(c, r.x + 64, r.y + 44, 12, 14, 'rgba(160,220,255,0.85)', 4, { lw: 1.4 });
+    }
     // Invernadero: jardineras con flores, depósito de agua, árbol
     r = R('green');
     [r.y + 45, r.y + 95].forEach(function (y, row) {
@@ -550,8 +564,17 @@
     } else circ(c, r.x + 110, r.y + 155, 40, '#2a2040', 3);
     // Seguridad: sillón y archivo de cintas
     r = R('security');
-    circ(c, r.x + 50, r.y + 64, 11, '#3a4a7a', 1.8); box(c, r.x + 40, r.y + 72, 20, 8, '#2a3a6a', 3, { lw: 1.4 });
-    box(c, r.x + 124, r.y + 58, 34, 34, '#3a3f55', 3); for (i = 0; i < 3; i++) box(c, r.x + 128, r.y + 62 + i * 10, 26, 6, '#1a1a2e', 1, { lw: 0.8 });
+    if (hasProps(SEC_PROPS)) {   // muebles de Gemini (B8)
+      drawProp(c, 'seguridad-mesa', r.x + 108, r.y + 48, 66);
+      drawProp(c, 'seguridad-servidor', r.x + 156, r.y + 104, 22);
+      drawProp(c, 'seguridad-silla', r.x + 104, r.y + 72, 20);
+      drawProp(c, 'seguridad-taquilla', r.x + 16, r.y + 104, 20);
+      drawProp(c, 'seguridad-cafe', r.x + 62, r.y + 104, 30);
+      drawProp(c, 'seguridad-archivador', r.x + 132, r.y + 104, 18);
+    } else {
+      circ(c, r.x + 50, r.y + 64, 11, '#3a4a7a', 1.8); box(c, r.x + 40, r.y + 72, 20, 8, '#2a3a6a', 3, { lw: 1.4 });
+      box(c, r.x + 124, r.y + 58, 34, 34, '#3a3f55', 3); for (i = 0; i < 3; i++) box(c, r.x + 128, r.y + 62 + i * 10, 26, 6, '#1a1a2e', 1, { lw: 0.8 });
+    }
     // Administración: archivadores, papeles, planta
     r = R('admin');
     for (i = 0; i < 3; i++) { box(c, r.x + 8, r.y + 8 + i * 28, 22, 24, '#8a8a68', 3); c.fillStyle = '#5a5a40'; c.fillRect(r.x + 15, r.y + 18 + i * 28, 8, 2); }
@@ -983,7 +1006,14 @@
     signs(c, tr, sk);
     placeItems(c, MAP.id === 'abisal' ? ABISAL_UNDER : NAVE_UNDER);
     sk.staticDecor(c);
-    placeItems(c, MAP.id === 'abisal' ? ABISAL_OVER : NAVE_OVER);
+    placeItems(c, MAP.id === 'abisal' ? ABISAL_OVER : NAVE_OVER.filter(function (it) {
+      // los detalles antiguos de las salas que ya tienen muebles de Gemini se quitan
+      var x = it[1], y = it[2];
+      if (it[0] === 'barrels' && x < 230 && hasProps(REACTOR_PROPS)) return false;
+      if (it[0] === 'toolbox' && x < 540 && y < 570 && hasProps(ENGINE_PROPS)) return false;
+      if ((it[0] === 'plant' || it[0] === 'locker') && x > 580 && x < 750 && y < 360 && hasProps(SEC_PROPS)) return false;
+      return true;
+    }));
     wallLamps(c, MAP.id !== 'abisal');
     vents(c);
     caches[key] = cv;
