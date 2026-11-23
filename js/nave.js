@@ -11,12 +11,14 @@
   function tex(id, src, tileW) {
     var im = new Image(); TEX[id] = { img: im, ok: false, w: tileW };
     im.onload = function () {
-      if (!tileW) TEX[id].sh = makeShadow(im);   // mueble: preparamos su sombra
+      if (tileW === 0) TEX[id].sh = makeShadow(im);   // mueble: preparamos su sombra
       TEX[id].ok = true; for (var k in caches) delete caches[k];
     };
     im.src = src;
   }
-  tex('cafe', 'img/mapas/nave-comedor-suelo.webp?v=1', 120);   // suelo del Comedor: 4 paneles de 30 de ancho por cada repetición
+  tex('cafe', 'img/mapas/nave-comedor-suelo.webp?v=1', 120);
+  tex('pared', 'img/mapas/nave-pared.webp?v=1', -1);   // frente de las paredes de las salas de la Nave (se escala al alto de la pared)
+  tex('pared2', 'img/mapas/nave-pared-pasillo.webp?v=1', -1);   // frente de las paredes de los pasillos (más sencilla)   // suelo del Comedor: 4 paneles de 30 de ancho por cada repetición
   // Muebles con imagen: prop(id) carga; drawProp dibuja centrado en x con la base en y y el ancho w
   // Sombra de un mueble: su misma silueta en negro y difuminada (se tumba en el suelo al dibujarla)
   function makeShadow(im) {
@@ -187,6 +189,24 @@
       MAP.topWalls(r).forEach(function (sg, si) {
         var x = sg[0], w = sg[1] - sg[0], y = r.y - F;
         if (w <= 2) return;
+        var isRoom = MAP.rooms.indexOf(r) >= 0, PTX = isRoom ? TEX.pared : (TEX.pared2 && TEX.pared2.ok ? TEX.pared2 : TEX.pared);
+        var PT = !W.face && PTX && PTX.ok && c.createPattern ? PTX : null;
+        if (PT) {
+          // pared dibujada con IA (Gemini): se repite a lo largo y ocupa todo el alto del frente
+          var pat = c.createPattern(PT.img, 'repeat-x'), k = F / PT.img.height;
+          if (pat && pat.setTransform && root.DOMMatrix) {
+            pat.setTransform(new DOMMatrix().translateSelf(0, y).scaleSelf(k, k));
+            c.fillStyle = pat; c.fillRect(x, y, w, F);
+            c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(x, r.y - 2, w, 2);   // pequeña sombra donde la pared toca el suelo
+            if (MAP.rooms.indexOf(r) >= 0 && w > 120) {
+              for (var wx2 = x + 24; wx2 < x + w - 50; wx2 += 90) {
+                rr(c, wx2, y + 6, 30, F - 14, 4); c.fillStyle = '#0a1030'; c.fill(); c.lineWidth = 2; c.strokeStyle = OUT; c.stroke();
+                for (var s3 = 0; s3 < 4; s3++) { c.fillStyle = '#fff'; c.fillRect(wx2 + 4 + rand(wx2 + s3) * 22, y + 8 + rand(wx2 * 3 + s3) * (F - 18), 1.5, 1.5); }
+              }
+            }
+            return;
+          }
+        }
         var g = c.createLinearGradient(0, y, 0, r.y);
         var wc = W.face || ['#d0d6e8', '#aeb6d0', '#7c86a8'];
         g.addColorStop(0, wc[0]); g.addColorStop(0.35, wc[1]); g.addColorStop(1, wc[2]);
