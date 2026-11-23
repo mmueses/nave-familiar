@@ -49,6 +49,14 @@
   tex('security', 'img/mapas/nave-seguridad-suelo.webp?v=1', 320);
   ['cama', 'escaner', 'armario', 'gotero', 'mesa', 'carrito'].forEach(function (n) { prop('enfermeria-' + n, 'nave-enfermeria-' + n + '.webp'); });
   ['mesa', 'silla', 'servidor', 'archivador', 'cafe', 'taquilla'].forEach(function (n) { prop('seguridad-' + n, 'nave-seguridad-' + n + '.webp'); });
+  // 23-11: máquinas de tareas (T1, T2) y muebles de frente (C1-C4) dibujados con Gemini
+  var TASK_W = { wires: 38, numbers: 26, download: 44, upload: 44, calibrate: 34, card: 26, simon: 36, pipes: 36, memory: 42, fill: 30,
+    clean: 34, maze: 48, sort: 48, safe: 36, reactor: 42, cameras: 62, admin: 52, lights: 32, asteroids: 36 };
+  Object.keys(TASK_W).forEach(function (n) { if (n !== 'upload') tex('tarea-' + n, 'img/mapas/tarea-' + n + '.webp?v=1', -1); });
+  ['reactor2-tanques', 'reactor2-refrigerador', 'motores2-medidores', 'motores2-deposito', 'enfermeria2-cama', 'enfermeria2-armario',
+   'seguridad2-servidor', 'seguridad2-archivador', 'seguridad2-taquilla', 'seguridad2-silla'].forEach(function (n) { tex(n, 'img/mapas/nave-' + n + '.webp?v=1', -1); });
+  var R2_PROPS = ['reactor-nucleo', 'reactor2-tanques', 'reactor2-refrigerador'], E2_PROPS = ['motores-turbina', 'motores2-medidores', 'motores2-deposito'];
+  var M2_PROPS = ['enfermeria2-cama', 'enfermeria2-armario'], S2_PROPS = ['seguridad2-servidor', 'seguridad2-archivador', 'seguridad2-taquilla', 'seguridad2-silla'];
   var USE_ISO = false;   // muebles en diagonal (isométricos) de B6 y B8: no encajan con la vista de frente del mapa
   var MED_PROPS = ['enfermeria-cama', 'enfermeria-escaner', 'enfermeria-armario', 'enfermeria-gotero', 'enfermeria-carrito'];
   var SEC_PROPS = ['seguridad-mesa', 'seguridad-silla', 'seguridad-servidor', 'seguridad-archivador', 'seguridad-cafe', 'seguridad-taquilla'];
@@ -504,18 +512,23 @@
     }
     // Enfermería: camillas, armario de medicinas, gotero
     r = R('medbay');
-    if (USE_ISO && hasProps(MED_PROPS)) {   // muebles de Gemini (B6), en diagonal: desactivados
+    var med2 = hasProps(M2_PROPS);
+    if (med2) {   // de frente (C3, C3b): dos camas en fila en el centro, armario en la pared de abajo
+      drawProp(c, 'enfermeria2-cama', r.x + 64, r.y + 104, 70);
+      drawProp(c, 'enfermeria2-cama', r.x + 138, r.y + 104, 70);
+      drawProp(c, 'enfermeria2-armario', r.x + 135, r.y + 158, 22);
+    } else if (USE_ISO && hasProps(MED_PROPS)) {   // muebles de Gemini (B6), en diagonal: desactivados
       drawProp(c, 'enfermeria-gotero', r.x + 52, r.y + 90, 16);     // junto a la primera cama
       drawProp(c, 'enfermeria-cama', r.x + 82, r.y + 92, 54);       // dos camas en fila bajo el monitor
       drawProp(c, 'enfermeria-cama', r.x + 140, r.y + 92, 54);
       drawProp(c, 'enfermeria-escaner', r.x + 30, r.y + 128, 44);    // pared izquierda, lejos de la puerta de abajo
       drawProp(c, 'enfermeria-armario', r.x + 124, r.y + 156, 22);   // pared de abajo, junto a la tarea del botiquín
-    } else [r.y + 46, r.y + 90].forEach(function (y) {
+    } else if (!med2) [r.y + 46, r.y + 90].forEach(function (y) {
       box(c, r.x + 85, y, 72, 26, '#eef0f6', 5);
       box(c, r.x + 137, y + 3, 17, 20, '#ffffff', 4, { lw: 1.2 });
       box(c, r.x + 85, y + 16, 50, 10, '#6fd0e0', 3, { lw: 1.2 });
     });
-    if (!(USE_ISO && hasProps(MED_PROPS))) {
+    if (!med2 && !(USE_ISO && hasProps(MED_PROPS))) {
       box(c, r.x + 172, r.y + 72, 22, 30, '#ffffff', 3); c.fillStyle = '#e5484d'; c.fillRect(r.x + 180, r.y + 78, 6, 16); c.fillRect(r.x + 175, r.y + 83, 16, 6);
       c.strokeStyle = OUT; c.lineWidth = 2; c.beginPath(); c.moveTo(r.x + 70, r.y + 50); c.lineTo(r.x + 70, r.y + 85); c.stroke();
       box(c, r.x + 64, r.y + 44, 12, 14, 'rgba(160,220,255,0.85)', 4, { lw: 1.4 });
@@ -538,9 +551,14 @@
     var engImg = hasProps(ENGINE_PROPS);
     ENG_T = { x: r.x + 44, b: r.y + 236, w: 70 };
     if (!engImg) { circ(c, r.x + 52 + 3, r.y + 192 + 5, 36, 'rgba(0,0,0,0.3)'); circ(c, r.x + 52, r.y + 192, 36, '#2b2440', 3); }
-    c.lineWidth = 8; c.strokeStyle = OUT; c.beginPath(); c.moveTo(r.x + 60, r.y + 10); c.lineTo(r.x + r.w - 60, r.y + 10); c.lineTo(r.x + r.w - 60, r.y + 70); c.stroke();
-    c.lineWidth = 5; c.strokeStyle = '#d0703a'; c.stroke();
-    if (engImg) {   // muebles de Gemini (B4)
+    var eng2 = hasProps(E2_PROPS);
+    if (!eng2) { c.lineWidth = 8; c.strokeStyle = OUT; c.beginPath(); c.moveTo(r.x + 60, r.y + 10); c.lineTo(r.x + r.w - 60, r.y + 10); c.lineTo(r.x + r.w - 60, r.y + 70); c.stroke();
+      c.lineWidth = 5; c.strokeStyle = '#d0703a'; c.stroke(); }
+    if (eng2) {   // de frente (C2): medidores en la pared de arriba; depósito y turbina abajo a la izquierda
+      drawProp(c, 'motores2-medidores', r.x + 104, r.y + 26, 44);
+      drawProp(c, 'motores2-deposito', r.x + 18, r.y + 180, 20);
+      drawProp(c, 'motores-turbina', ENG_T.x, ENG_T.b, ENG_T.w);
+    } else if (engImg) {   // muebles de Gemini (B4)
       drawProp(c, 'motores-deposito', r.x + 18, r.y + 186, 22);     // pared izquierda, junto a la turbina
       drawProp(c, 'motores-turbina', ENG_T.x, ENG_T.b, ENG_T.w);    // esquina de abajo a la izquierda
     } else {
@@ -549,19 +567,31 @@
     }
     // Reactor: anillo del núcleo y conductos
     r = R('reactor');
-    circ(c, r.x + 113, r.y + 160, 40, 'rgba(0,0,0,0.3)'); circ(c, r.x + 110, r.y + 155, 40, '#2a2040', 3);
-    c.lineWidth = 6; c.strokeStyle = OUT;
-    [[r.x + 60, r.y + 40], [r.x + 180, r.y + 60], [r.x + 180, r.y + 190]].forEach(function (p) { c.beginPath(); c.moveTo(r.x + 110, r.y + 155); c.lineTo(p[0], p[1]); c.stroke(); });
-    c.lineWidth = 3; c.strokeStyle = '#4a5a8a';
-    [[r.x + 60, r.y + 40], [r.x + 180, r.y + 60], [r.x + 180, r.y + 190]].forEach(function (p) { c.beginPath(); c.moveTo(r.x + 110, r.y + 155); c.lineTo(p[0], p[1]); c.stroke(); });
-    if (hasProps(REACTOR_PROPS)) {   // muebles de Gemini (B2)
+    if (!hasProps(REACTOR_PROPS)) {
+      circ(c, r.x + 113, r.y + 160, 40, 'rgba(0,0,0,0.3)'); circ(c, r.x + 110, r.y + 155, 40, '#2a2040', 3);
+      c.lineWidth = 6; c.strokeStyle = OUT;
+      [[r.x + 60, r.y + 40], [r.x + 180, r.y + 60], [r.x + 180, r.y + 190]].forEach(function (p) { c.beginPath(); c.moveTo(r.x + 110, r.y + 155); c.lineTo(p[0], p[1]); c.stroke(); });
+      c.lineWidth = 3; c.strokeStyle = '#4a5a8a';
+      [[r.x + 60, r.y + 40], [r.x + 180, r.y + 60], [r.x + 180, r.y + 190]].forEach(function (p) { c.beginPath(); c.moveTo(r.x + 110, r.y + 155); c.lineTo(p[0], p[1]); c.stroke(); });
+    }
+    if (hasProps(R2_PROPS)) {   // de frente (C1): tanques en la pared de arriba, refrigerador en la esquina de abajo a la derecha
+      drawProp(c, 'reactor2-tanques', r.x + 110, r.y + 34, 44);
+      drawProp(c, 'reactor2-refrigerador', r.x + 184, r.y + 194, 24);
+      drawProp(c, 'reactor-nucleo', r.x + 110, r.y + 192, 100);
+    } else if (hasProps(REACTOR_PROPS)) {   // muebles de Gemini (B2)
       drawProp(c, 'reactor-tanques', r.x + 22, r.y + 126, 32);     // pared izquierda, entre las dos tareas
       drawProp(c, 'reactor-barril', r.x + 184, r.y + 156, 18);     // pared derecha, bajo la puerta
       drawProp(c, 'reactor-nucleo', r.x + 110, r.y + 192, 100);
     } else circ(c, r.x + 110, r.y + 155, 40, '#2a2040', 3);
     // Seguridad: sillón y archivo de cintas
     r = R('security');
-    if (USE_ISO && hasProps(SEC_PROPS)) {   // muebles de Gemini (B8), en diagonal: desactivados
+    var sec2 = hasProps(S2_PROPS);
+    if (sec2) {   // de frente (C4): servidor en la pared de arriba, silla ante las cámaras, taquilla y archivador en las esquinas de abajo
+      drawProp(c, 'seguridad2-servidor', r.x + 98, r.y + 30, 20);
+      drawProp(c, 'seguridad2-silla', r.x + 50, r.y + 68, 18);
+      drawProp(c, 'seguridad2-taquilla', r.x + 16, r.y + 106, 18);
+      drawProp(c, 'seguridad2-archivador', r.x + 154, r.y + 106, 22);
+    } else if (USE_ISO && hasProps(SEC_PROPS)) {   // muebles de Gemini (B8), en diagonal: desactivados
       drawProp(c, 'seguridad-servidor', r.x + 98, r.y + 36, 22);    // pared de arriba, entre las cámaras y la rejilla
       drawProp(c, 'seguridad-archivador', r.x + 120, r.y + 34, 16);
       drawProp(c, 'seguridad-silla', r.x + 50, r.y + 72, 18);       // delante de la consola de cámaras
@@ -841,8 +871,13 @@
       c.strokeStyle = 'rgba(255,230,80,' + (0.5 + 0.5 * p) + ')'; c.lineWidth = 4;
       c.beginPath(); c.arc(0, 0, 24 + p * 4, 0, Math.PI * 2); c.stroke();
     }
-    var i;
-    if (s.type === 'emergency' && TEX['cafe-boton'] && TEX['cafe-boton'].ok) {
+    var i, TT = TEX['tarea-' + (s.type === 'upload' ? 'download' : s.type)];
+    if (MAP.id === 'nave' && TT && TT.ok) {   // máquina dibujada con Gemini, apoyada 18 por debajo del punto de la tarea
+      var tw = TASK_W[s.type] || 36, th = tw * TT.img.height / TT.img.width;
+      c.drawImage(TT.img, -tw / 2, 18 - th, tw, th);
+      if (s.type === 'reactor' && reactorAlarm && Math.sin(t * 10) > 0) { c.fillStyle = 'rgba(255,40,40,0.45)'; rr(c, -tw / 2, 18 - th, tw, th, 6); c.fill(); }
+      if (s.type === 'lights' && lightsOut && Math.sin(t * 8) > 0) { c.fillStyle = 'rgba(255,60,60,0.4)'; rr(c, -tw / 2, 18 - th, tw, th, 4); c.fill(); }
+    } else if (s.type === 'emergency' && TEX['cafe-boton'] && TEX['cafe-boton'].ok) {
       drawProp(c, 'cafe-boton', 0, 20, 40);
     } else if (s.type === 'emergency') {
       box(c, -22, -22, 44, 44, '#5a6488', 8);
@@ -1008,7 +1043,7 @@
       var x = it[1], y = it[2];
       if (it[0] === 'barrels' && x < 230 && hasProps(REACTOR_PROPS)) return false;
       if (it[0] === 'toolbox' && x < 540 && y < 570 && hasProps(ENGINE_PROPS)) return false;
-      if ((it[0] === 'plant' || it[0] === 'locker') && x > 580 && x < 750 && y < 360 && USE_ISO && hasProps(SEC_PROPS)) return false;
+      if ((it[0] === 'plant' || it[0] === 'locker') && x > 580 && x < 750 && y < 360 && hasProps(S2_PROPS)) return false;
       return true;
     }));
     wallLamps(c, MAP.id !== 'abisal');
