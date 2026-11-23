@@ -19,6 +19,7 @@
   tex('cafe', 'img/mapas/nave-comedor-suelo.webp?v=1', 120);
   tex('pared', 'img/mapas/nave-pared.webp?v=1', -1);   // frente de las paredes de las salas de la Nave (se escala al alto de la pared)
   tex('pared2', 'img/mapas/nave-pared-pasillo.webp?v=1', -1);   // frente de las paredes de los pasillos (más sencilla)
+  tex('macizo', 'img/mapas/nave-macizo.webp?v=1', 300);       // A4: encima de las paredes (lo macizo de la nave), cada 300 unidades
   tex('ojo', 'img/mapas/nave-ojo-buey.webp?v=1', -1);           // ojo de buey en las paredes de las salas
   tex('rejilla', 'img/mapas/nave-rejilla.webp?v=1', -1);        // rejillas de ventilación (los dos mapas)
   tex('lampara', 'img/mapas/nave-lampara.webp?v=1', -1);        // lámpara de pared de la Nave
@@ -125,9 +126,15 @@
     var top = H.top || '#434c70', line = H.line || 'rgba(14,18,40,0.55)', hi = H.hi || 'rgba(190,205,255,0.10)';
     hullPath(c); c.fillStyle = top; c.fill();
     c.save(); hullPath(c); c.clip();
+    var MT = MAP.id === 'nave' && TEX.macizo && TEX.macizo.ok && c.createPattern ? TEX.macizo : null;
+    if (MT) {   // chapa de Gemini (A4): ya trae planchas, remaches, rejillas y tuberías
+      var mp = c.createPattern(MT.img, 'repeat'), mk = MT.w / MT.img.width;
+      mp.setTransform(new DOMMatrix().scaleSelf(mk, mk)); c.fillStyle = mp; c.fillRect(-200, -200, MAP.w + 400, MAP.h + 400);
+      c.fillStyle = 'rgba(8,12,32,0.18)'; c.fillRect(-200, -200, MAP.w + 400, MAP.h + 400);   // un poco más oscura que los suelos
+    }
     // planchas de metal (encima de las paredes) con juntas y remaches
     var PW = 64, PH = 44, x, y, i, row = 0;
-    for (y = -40; y < MAP.h + 60; y += PH, row++) {
+    if (!MT) for (y = -40; y < MAP.h + 60; y += PH, row++) {
       for (x = -60 - (row % 2) * PW / 2; x < MAP.w + 80; x += PW) {
         var v = rand(x * 0.37 + y * 1.91);
         c.fillStyle = v > 0.66 ? 'rgba(255,255,255,0.045)' : (v < 0.25 ? 'rgba(0,0,0,0.10)' : 'rgba(0,0,0,0)');
@@ -141,7 +148,7 @@
     }
     // tuberías y cables que recorren el interior de las paredes (las salas las tapan; solo se ven en lo macizo)
     var pipes = H.pipes || ['#6e7aa6', '#9a6a4a', '#5a8a7a'];
-    for (i = 0; i < 7; i++) {
+    if (!MT) for (i = 0; i < 7; i++) {
       var py = 30 + rand(i + 11) * (MAP.h - 60), col = pipes[i % pipes.length];
       c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(-40, py + 3, MAP.w + 80, 7);
       c.fillStyle = OUT; c.fillRect(-40, py - 1, MAP.w + 80, 9);
@@ -149,7 +156,7 @@
       c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(-40, py + 1, MAP.w + 80, 1.5);
       for (x = rand(i) * 80; x < MAP.w + 40; x += 110) { c.fillStyle = OUT; c.fillRect(x - 1, py - 3, 8, 13); c.fillStyle = '#8a94b8'; c.fillRect(x, py - 2, 6, 11); }
     }
-    for (i = 0; i < 6; i++) {
+    if (!MT) for (i = 0; i < 6; i++) {
       var px2 = 60 + rand(i + 31) * (MAP.w - 120), col2 = pipes[(i + 1) % pipes.length];
       c.fillStyle = OUT; c.fillRect(px2 - 1, -40, 9, MAP.h + 80);
       c.fillStyle = col2; c.fillRect(px2, -40, 7, MAP.h + 80);
