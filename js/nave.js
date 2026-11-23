@@ -40,6 +40,14 @@
   }
   function prop(id, file) { tex(id, 'img/mapas/' + file + '?v=2', 0); }
   ['mesa', 'maquina', 'boton', 'papelera', 'planta', 'monitor'].forEach(function (n) { prop('cafe-' + n, 'nave-comedor-' + n + '.webp'); });
+  // Fase 2, tanda 1: Reactor, Motores y Enfermería
+  tex('reactor', 'img/mapas/nave-reactor-suelo.webp?v=1', 200);
+  tex('engines', 'img/mapas/nave-motores-suelo.webp?v=1', 240);
+  tex('medbay', 'img/mapas/nave-enfermeria-suelo.webp?v=1', 176);
+  ['nucleo', 'consola', 'tanques', 'tubos', 'barril', 'refrigerador'].forEach(function (n) { prop('reactor-' + n, 'nave-reactor-' + n + '.webp'); });
+  ['turbina', 'deposito', 'medidores', 'herramientas', 'cajas', 'banco'].forEach(function (n) { prop('motores-' + n, 'nave-motores-' + n + '.webp'); });
+  var REACTOR_PROPS = ['reactor-nucleo', 'reactor-tanques', 'reactor-tubos', 'reactor-barril', 'reactor-refrigerador'];
+  var ENGINE_PROPS = ['motores-turbina', 'motores-deposito', 'motores-medidores', 'motores-herramientas', 'motores-cajas', 'motores-banco'];
   function hasProps(list) { for (var i = 0; i < list.length; i++) if (!TEX[list[i]] || !TEX[list[i]].ok) return false; return true; }
   function drawProp(c, id, x, y, w, shadowOn) {
     var T = TEX[id]; if (!T || !T.ok) return false;
@@ -62,7 +70,7 @@
   }
   var CAFE_PROPS = ['cafe-mesa', 'cafe-maquina', 'cafe-papelera', 'cafe-planta'];
   function texFloor(c, r) {
-    var T = TEX[r.id];
+    var T = MAP.id === 'nave' && TEX[r.id];   // los suelos con imagen son de la Nave
     if (!T || !T.ok || !c.createPattern) return false;
     var pat = c.createPattern(T.img, 'repeat');
     if (!pat) return false;
@@ -511,11 +519,21 @@
     circ(c, r.x + 180, r.y + 58, 14, '#2a5d9a', 2); circ(c, r.x + 180, r.y + 58, 9, 'rgba(110,190,255,0.85)');
     // Motores: base de turbina, tuberías y medidores
     r = R('engines');
-    circ(c, r.x + 52 + 3, r.y + 192 + 5, 36, 'rgba(0,0,0,0.3)'); circ(c, r.x + 52, r.y + 192, 36, '#2b2440', 3);
+    var engImg = hasProps(ENGINE_PROPS);
+    if (!engImg) { circ(c, r.x + 52 + 3, r.y + 192 + 5, 36, 'rgba(0,0,0,0.3)'); circ(c, r.x + 52, r.y + 192, 36, '#2b2440', 3); }
     c.lineWidth = 8; c.strokeStyle = OUT; c.beginPath(); c.moveTo(r.x + 60, r.y + 10); c.lineTo(r.x + r.w - 60, r.y + 10); c.lineTo(r.x + r.w - 60, r.y + 70); c.stroke();
     c.lineWidth = 5; c.strokeStyle = '#d0703a'; c.stroke();
-    for (i = 0; i < 3; i++) { circ(c, r.x + 110 + i * 26, r.y + 30, 8, '#eef0f6', 1.6); c.strokeStyle = '#e5484d'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(r.x + 110 + i * 26, r.y + 30); c.lineTo(r.x + 114 + i * 26, r.y + 25); c.stroke(); }
-    box(c, r.x + 160, r.y + 140, 50, 40, '#4a4060', 4); box(c, r.x + 166, r.y + 146, 38, 12, '#ff9a4a', 2, { lw: 1 });
+    if (engImg) {   // muebles de Gemini (B4)
+      drawProp(c, 'motores-medidores', r.x + 136, r.y + 52, 64);
+      drawProp(c, 'motores-banco', r.x + 150, r.y + 120, 50);
+      drawProp(c, 'motores-deposito', r.x + 222, r.y + 112, 28);
+      drawProp(c, 'motores-cajas', r.x + 182, r.y + 186, 50);
+      drawProp(c, 'motores-turbina', r.x + 52, r.y + 224, 94);
+      drawProp(c, 'motores-herramientas', r.x + 118, r.y + 232, 32);
+    } else {
+      for (i = 0; i < 3; i++) { circ(c, r.x + 110 + i * 26, r.y + 30, 8, '#eef0f6', 1.6); c.strokeStyle = '#e5484d'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(r.x + 110 + i * 26, r.y + 30); c.lineTo(r.x + 114 + i * 26, r.y + 25); c.stroke(); }
+      box(c, r.x + 160, r.y + 140, 50, 40, '#4a4060', 4); box(c, r.x + 166, r.y + 146, 38, 12, '#ff9a4a', 2, { lw: 1 });
+    }
     // Reactor: anillo del núcleo y conductos
     r = R('reactor');
     circ(c, r.x + 113, r.y + 160, 40, 'rgba(0,0,0,0.3)'); circ(c, r.x + 110, r.y + 155, 40, '#2a2040', 3);
@@ -523,7 +541,13 @@
     [[r.x + 60, r.y + 40], [r.x + 180, r.y + 60], [r.x + 180, r.y + 190]].forEach(function (p) { c.beginPath(); c.moveTo(r.x + 110, r.y + 155); c.lineTo(p[0], p[1]); c.stroke(); });
     c.lineWidth = 3; c.strokeStyle = '#4a5a8a';
     [[r.x + 60, r.y + 40], [r.x + 180, r.y + 60], [r.x + 180, r.y + 190]].forEach(function (p) { c.beginPath(); c.moveTo(r.x + 110, r.y + 155); c.lineTo(p[0], p[1]); c.stroke(); });
-    circ(c, r.x + 110, r.y + 155, 40, '#2a2040', 3);
+    if (hasProps(REACTOR_PROPS)) {   // muebles de Gemini (B2)
+      drawProp(c, 'reactor-tubos', r.x + 70, r.y + 62, 46);
+      drawProp(c, 'reactor-tanques', r.x + 178, r.y + 84, 40);
+      drawProp(c, 'reactor-refrigerador', r.x + 182, r.y + 196, 28);
+      drawProp(c, 'reactor-barril', r.x + 186, r.y + 140, 20);
+      drawProp(c, 'reactor-nucleo', r.x + 110, r.y + 192, 100);
+    } else circ(c, r.x + 110, r.y + 155, 40, '#2a2040', 3);
     // Seguridad: sillón y archivo de cintas
     r = R('security');
     circ(c, r.x + 50, r.y + 64, 11, '#3a4a7a', 1.8); box(c, r.x + 40, r.y + 72, 20, 8, '#2a3a6a', 3, { lw: 1.4 });
@@ -592,20 +616,34 @@
     // Motores: turbina girando y chispas
     r = R('engines');
     var cx = r.x + 52, cy = r.y + 192;
-    var glow = c.createRadialGradient(cx, cy, 4, cx, cy, 31); glow.addColorStop(0, 'rgba(255,200,100,0.95)'); glow.addColorStop(1, 'rgba(255,90,40,0.15)');
-    circ(c, cx, cy, 31, glow);
-    c.save(); c.translate(cx, cy); c.rotate(t * 5); c.fillStyle = '#4a4068'; c.strokeStyle = OUT; c.lineWidth = 1.2;
-    for (i = 0; i < 6; i++) { c.rotate(Math.PI / 3); c.beginPath(); c.ellipse(14, 0, 14, 5, 0.4, 0, Math.PI * 2); c.fill(); c.stroke(); }
-    c.restore(); circ(c, cx, cy, 7, '#c9b8ff', 1.5);
+    if (hasProps(ENGINE_PROPS)) {   // estelas girando encima de la turbina dibujada
+      c.save(); c.translate(cx, cy + 2); c.scale(1, 0.55); c.rotate(t * 6); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 3;
+      for (i = 0; i < 3; i++) { c.rotate(Math.PI * 2 / 3); c.beginPath(); c.arc(0, 0, 26, 0, 0.9); c.stroke(); }
+      c.restore();
+    } else {
+      var glow = c.createRadialGradient(cx, cy, 4, cx, cy, 31); glow.addColorStop(0, 'rgba(255,200,100,0.95)'); glow.addColorStop(1, 'rgba(255,90,40,0.15)');
+      circ(c, cx, cy, 31, glow);
+      c.save(); c.translate(cx, cy); c.rotate(t * 5); c.fillStyle = '#4a4068'; c.strokeStyle = OUT; c.lineWidth = 1.2;
+      for (i = 0; i < 6; i++) { c.rotate(Math.PI / 3); c.beginPath(); c.ellipse(14, 0, 14, 5, 0.4, 0, Math.PI * 2); c.fill(); c.stroke(); }
+      c.restore(); circ(c, cx, cy, 7, '#c9b8ff', 1.5);
+    }
     if (Math.sin(t * 7) > 0.6) for (i = 0; i < 4; i++) { c.fillStyle = '#ffe066'; c.fillRect(r.x + 185 + rand(Math.floor(t * 10) + i) * 20, r.y + 135 - rand(Math.floor(t * 10) + i + 5) * 15, 2, 2); }
     // Reactor: núcleo, energía por los conductos
     r = R('reactor');
     var rcx = r.x + 110, rcy = r.y + 155, alarm = opts.reactor, pulse = 0.5 + 0.5 * Math.sin(t * (alarm ? 10 : 2));
-    var core = c.createRadialGradient(rcx, rcy, 3, rcx, rcy, 32);
-    core.addColorStop(0, alarm ? 'rgba(255,240,200,1)' : 'rgba(220,255,255,1)');
-    core.addColorStop(1, alarm ? 'rgba(255,40,40,' + (0.35 + 0.5 * pulse) + ')' : 'rgba(60,200,255,' + (0.3 + 0.3 * pulse) + ')');
-    circ(c, rcx, rcy, 32, core);
-    c.strokeStyle = alarm ? '#ff5050' : '#8a7fb8'; c.lineWidth = 4; circ(c, rcx, rcy, 38); c.stroke();
+    if (hasProps(REACTOR_PROPS)) {   // brillo que late encima de la cúpula dibujada
+      var gy = rcy - 4, gl = c.createRadialGradient(rcx, gy, 2, rcx, gy, 40);
+      gl.addColorStop(0, alarm ? 'rgba(255,200,170,' + (0.5 + 0.4 * pulse) + ')' : 'rgba(200,250,255,' + (0.25 + 0.3 * pulse) + ')');
+      gl.addColorStop(1, alarm ? 'rgba(255,30,30,0)' : 'rgba(60,180,255,0)');
+      c.save(); c.globalCompositeOperation = alarm ? 'source-over' : 'lighter'; c.fillStyle = gl; c.beginPath(); c.ellipse(rcx, gy, 40, 32, 0, 0, Math.PI * 2); c.fill(); c.restore();
+      if (alarm) { c.fillStyle = 'rgba(255,40,40,' + (0.25 * pulse) + ')'; c.beginPath(); c.ellipse(rcx, gy, 44, 34, 0, 0, Math.PI * 2); c.fill(); }
+    } else {
+      var core = c.createRadialGradient(rcx, rcy, 3, rcx, rcy, 32);
+      core.addColorStop(0, alarm ? 'rgba(255,240,200,1)' : 'rgba(220,255,255,1)');
+      core.addColorStop(1, alarm ? 'rgba(255,40,40,' + (0.35 + 0.5 * pulse) + ')' : 'rgba(60,200,255,' + (0.3 + 0.3 * pulse) + ')');
+      circ(c, rcx, rcy, 32, core);
+      c.strokeStyle = alarm ? '#ff5050' : '#8a7fb8'; c.lineWidth = 4; circ(c, rcx, rcy, 38); c.stroke();
+    }
     for (i = 0; i < 4; i++) { var ang = t * 1.5 + i * Math.PI / 2; circ(c, rcx + Math.cos(ang) * 46, rcy + Math.sin(ang) * 46, 4, alarm ? '#ff8080' : '#9ad8ff', 1); }
     [[r.x + 60, r.y + 40], [r.x + 180, r.y + 60], [r.x + 180, r.y + 190]].forEach(function (p, k) {
       var f = (t * 0.8 + k * 0.3) % 1;
