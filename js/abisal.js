@@ -94,7 +94,7 @@
   }
 
   // ---------- EXTERIOR: casco de roca y metal, cristales de hielo, focos ----------
-  function exteriorStatic(c) {
+  function exteriorStatic(c, sk) {
     // roca sobre la que está la base
     c.fillStyle = '#2a2f45';
     U.unionPath(c, 60, 50, 50); c.fill();
@@ -104,17 +104,8 @@
       var x = 30 + i * (MAP.w - 60) / 33, y = MAP.h + 40 + rand(i) * 16;
       if (MAP.inRect(x, MAP.h - 60) || rand(i + 3) > 0.5) crystal(c, x, y + 10, 24 + rand(i + 5) * 28, rand(i + 8) > 0.6 ? '#c9b8ff' : '#9fd8ff');
     }
-    // casco metálico
-    c.fillStyle = '#25324a'; U.unionPath(c, 34, 26, 48); c.fill();
-    c.save(); U.unionPath(c, 34, 26, 48); c.clip();
-    c.strokeStyle = 'rgba(140,200,240,0.12)'; c.lineWidth = 2;
-    for (var px = -100; px < MAP.w + 100; px += 70) { c.beginPath(); c.moveTo(px, -100); c.lineTo(px, MAP.h + 100); c.stroke(); }
-    for (var py = -100; py < MAP.h + 100; py += 50) { c.beginPath(); c.moveTo(-100, py); c.lineTo(MAP.w + 100, py); c.stroke(); }
-    c.fillStyle = 'rgba(170,220,255,0.2)';
-    for (px = -100; px < MAP.w + 100; px += 70) for (py = -100; py < MAP.h + 100; py += 50) c.fillRect(px + 4, py + 4, 2.5, 2.5);
-    c.restore();
-    U.unionPath(c, 34, 26, 48); c.strokeStyle = OUT; c.lineWidth = 6; c.stroke();
-    c.strokeStyle = '#5aa0c8'; c.lineWidth = 2.5; c.stroke();
+    // casco: toda la base es un bloque macizo; las salas y pasillos son huecos sin techo
+    S.hull(c, sk || S.SKINS.abisal);
     // antena en comunicaciones
     var cm = R('comms');
     c.strokeStyle = OUT; c.lineWidth = 5; c.beginPath(); c.moveTo(cm.x + 40, cm.y - 40); c.lineTo(cm.x + 20, cm.y - 95); c.stroke();
@@ -131,7 +122,7 @@
     for (i = 0; i < 40; i++) {
       var x = -200 + rand(i) * (MAP.w + 400), sp = 30 + rand(i + 4) * 40;
       var y = MAP.h + 250 - ((t * sp + rand(i + 9) * 1500) % (MAP.h + 650));
-      if (MAP.inRect(x, y) || MAP.inRect(x - 45, y - 45) || MAP.inRect(x + 45, y - 45) || MAP.inRect(x - 45, y + 45) || MAP.inRect(x + 45, y + 45)) continue;
+      if (S.inHull(x, y) || S.inHull(x - 12, y - 12) || S.inHull(x + 12, y + 12)) continue;   // solo por fuera de la base
       c.strokeStyle = 'rgba(200,240,255,0.6)'; c.lineWidth = 1.5; circ(c, x + Math.sin(t * 2 + i) * 4, y, 2 + rand(i + 2) * 4); c.stroke();
     }
     // peces nadando alrededor
@@ -508,6 +499,7 @@
   S.SKINS.abisal = {
     void: '#03142a', background: background, exteriorStatic: exteriorStatic, exteriorAnim: exteriorAnim,
     floor: floor, corridor: corridor, staticDecor: staticDecor, animDecor: animDecor, theme: THEME,
+    hull: { top: '#35506a', band: '#1e3a52', bandHi: '#4f86a8', rim: '#5aa0c8', line: 'rgba(8,20,36,0.55)', pipes: ['#5a8aa6', '#8a7a5a', '#4a9a8a'] },
     wall: { base: '#1e3a52', face: ['#c8e0ee', '#9cc0d6', '#5f86a0'], windows: windows }
   };
 })(window);
