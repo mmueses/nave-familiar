@@ -56,7 +56,7 @@
   ['reactor2-tanques', 'reactor2-refrigerador', 'motores2-medidores', 'motores2-deposito', 'enfermeria2-cama', 'enfermeria2-armario',
    'seguridad2-servidor', 'seguridad2-archivador', 'seguridad2-taquilla', 'seguridad2-silla'].forEach(function (n) { tex(n, 'img/mapas/nave-' + n + '.webp?v=1', -1); });
   var R2_PROPS = ['reactor-nucleo', 'reactor2-tanques', 'reactor2-refrigerador'], E2_PROPS = ['motores-turbina', 'motores2-medidores', 'motores2-deposito'];
-  var M2_PROPS = ['enfermeria2-cama', 'enfermeria2-armario'], S2_PROPS = ['seguridad2-servidor', 'seguridad2-archivador', 'seguridad2-taquilla', 'seguridad2-silla'];
+  var M2_PROPS = ['enfermeria2-cama'], S2_PROPS = ['seguridad2-servidor', 'seguridad2-archivador', 'seguridad2-taquilla', 'seguridad2-silla'];
   var USE_ISO = false;   // muebles en diagonal (isométricos) de B6 y B8: no encajan con la vista de frente del mapa
   var MED_PROPS = ['enfermeria-cama', 'enfermeria-escaner', 'enfermeria-armario', 'enfermeria-gotero', 'enfermeria-carrito'];
   var SEC_PROPS = ['seguridad-mesa', 'seguridad-silla', 'seguridad-servidor', 'seguridad-archivador', 'seguridad-cafe', 'seguridad-taquilla'];
@@ -513,10 +513,9 @@
     // Enfermería: camillas, armario de medicinas, gotero
     r = R('medbay');
     var med2 = hasProps(M2_PROPS);
-    if (med2) {   // de frente (C3, C3b): dos camas en fila en el centro, armario en la pared de abajo
+    if (med2) {   // de frente (C3b): dos camas en fila en el centro (el armario se quitó: salía en diagonal)
       drawProp(c, 'enfermeria2-cama', r.x + 64, r.y + 104, 70);
       drawProp(c, 'enfermeria2-cama', r.x + 138, r.y + 104, 70);
-      drawProp(c, 'enfermeria2-armario', r.x + 135, r.y + 158, 22);
     } else if (USE_ISO && hasProps(MED_PROPS)) {   // muebles de Gemini (B6), en diagonal: desactivados
       drawProp(c, 'enfermeria-gotero', r.x + 52, r.y + 90, 16);     // junto a la primera cama
       drawProp(c, 'enfermeria-cama', r.x + 82, r.y + 92, 54);       // dos camas en fila bajo el monitor
