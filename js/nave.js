@@ -10,18 +10,46 @@
   var TEX = {};
   function tex(id, src, tileW) {
     var im = new Image(); TEX[id] = { img: im, ok: false, w: tileW };
-    im.onload = function () { TEX[id].ok = true; for (var k in caches) delete caches[k]; };
+    im.onload = function () {
+      if (!tileW) TEX[id].sh = makeShadow(im);   // mueble: preparamos su sombra
+      TEX[id].ok = true; for (var k in caches) delete caches[k];
+    };
     im.src = src;
   }
   tex('cafe', 'img/mapas/nave-comedor-suelo.webp?v=1', 120);   // suelo del Comedor: 4 paneles de 30 de ancho por cada repetición
   // Muebles con imagen: prop(id) carga; drawProp dibuja centrado en x con la base en y y el ancho w
-  function prop(id, file) { tex(id, 'img/mapas/' + file + '?v=1', 0); }
+  // Sombra de un mueble: su misma silueta en negro y difuminada (se tumba en el suelo al dibujarla)
+  function makeShadow(im) {
+    try {
+      var cv = document.createElement('canvas'), pad = 12;
+      cv.width = im.width + pad * 2; cv.height = im.height + pad * 2;
+      var g = cv.getContext('2d');
+      if ('filter' in g) g.filter = 'blur(3px)';
+      g.drawImage(im, pad, pad);
+      g.filter = 'none'; g.globalCompositeOperation = 'source-in'; g.fillStyle = '#000'; g.fillRect(0, 0, cv.width, cv.height);
+      cv.pad = pad;
+      return cv;
+    } catch (e) { return null; }
+  }
+  function prop(id, file) { tex(id, 'img/mapas/' + file + '?v=2', 0); }
   ['mesa', 'maquina', 'boton', 'papelera', 'planta', 'monitor'].forEach(function (n) { prop('cafe-' + n, 'nave-comedor-' + n + '.webp'); });
   function hasProps(list) { for (var i = 0; i < list.length; i++) if (!TEX[list[i]] || !TEX[list[i]].ok) return false; return true; }
   function drawProp(c, id, x, y, w, shadowOn) {
     var T = TEX[id]; if (!T || !T.ok) return false;
     var h = w * T.img.height / T.img.width;
-    if (shadowOn !== false) { c.fillStyle = 'rgba(0,0,0,0.25)'; c.beginPath(); c.ellipse(x, y - 2, w * 0.42, Math.max(4, w * 0.12), 0, 0, Math.PI * 2); c.fill(); }
+    if (shadowOn !== false && T.sh) {
+      // sombra proyectada: pegada a la base y tumbada hacia la derecha y atrás (luz desde la izquierda)
+      var k = w / T.img.width, pad = T.sh.pad * k;
+      c.save(); c.translate(x, y - 1); c.transform(1, 0, -0.75, 0.28, 0, 0); c.globalAlpha = 0.42;
+      c.drawImage(T.sh, -w / 2 - pad, -h - pad, w + pad * 2, h + pad * 2);
+      c.restore();
+      // oscuridad de contacto justo donde el objeto toca el suelo (queda casi toda tapada por el objeto)
+      var cy = y - 3, rx = w * 0.46;
+      var g = c.createRadialGradient(x, cy, 0, x, cy, rx);
+      g.addColorStop(0, 'rgba(0,0,0,0.55)'); g.addColorStop(0.7, 'rgba(0,0,0,0.25)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.save(); c.translate(x, cy); c.scale(1, 0.18); c.translate(-x, -cy);
+      c.fillStyle = g; c.beginPath(); c.arc(x, cy, rx, 0, Math.PI * 2); c.fill(); c.restore();
+    }
     c.drawImage(T.img, x - w / 2, y - h, w, h);
     return true;
   }
