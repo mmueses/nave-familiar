@@ -4,17 +4,28 @@
 # - Base recta (máquina, taquilla...): rectángulo que sale de la línea de abajo, con un fondo
 #   proporcional al ancho.
 # Todo lo que queda por encima de la huella no choca: el mueble tapa al personaje que pasa por detrás.
-# Resultado en fracciones de la imagen; el mueble se dibuja con su base en (x, y) y ancho w.
+# Cada pieza tiene una lista de 'formas' (elipse o caja con 'caja': [izq, arriba, der, abajo], o
+# poligono con 'puntos'), en fracciones de la imagen; el mueble se dibuja con su base en (x, y) y ancho w.
 import json, sys, glob, os
 from PIL import Image
 FONDO_CAJA = 0.45      # fondo de un rectángulo = 45 % de su ancho
 # Ajustes a mano por pieza (se aplican después del cálculo): forma forzada y/o fondo
 AJUSTES = {
-    'reactor-nucleo': {'forma': 'elipse', 'huella': [0.0, 0.30, 1.0, 1.0]},   # cúpula: aprobada así por el usuario
+    'reactor-nucleo': {'formas': [{'tipo': 'elipse', 'caja': [0.0, 0.30, 1.0, 1.0]}]},   # cúpula: aprobada así por el usuario
     'seguridad2-silla': {'forma': 'elipse', 'fondo': 0.45},   # patas en estrella
     'seguridad-silla': {'forma': 'elipse', 'fondo': 0.45},
-    'comedor-maquina': {'forma': 'caja', 'fondo': 0.45},
-    'comedor-mesa': {'forma': 'elipse', 'fondo': 0.55},      # tablero redondo con taburetes alrededor
+    # Mesa: el tablero, bajado hasta el suelo (su borde de abajo = el de la base de la pata), y un círculo por taburete
+    'comedor-mesa': {'formas': [
+        {'tipo': 'elipse', 'caja': [0.115, 0.33, 0.90, 0.835]},   # tablero bajado al suelo
+        {'tipo': 'elipse', 'caja': [0.065, 0.436, 0.185, 0.51]},  # taburete de atrás, izquierda
+        {'tipo': 'elipse', 'caja': [0.808, 0.436, 0.927, 0.51]},  # taburete de atrás, derecha
+        {'tipo': 'elipse', 'caja': [0.115, 0.894, 0.246, 1.0]},   # taburete de delante, izquierda
+        {'tipo': 'elipse', 'caja': [0.765, 0.894, 0.896, 1.0]}]}, # taburete de delante, derecha
+    # Máquina expendedora (está girada): el suelo es un paralelogramo en perspectiva.
+    # Esquinas de abajo medidas en el dibujo: delante-izquierda, delante-derecha, atrás-derecha; la 4.ª se completa.
+    'comedor-maquina': {'formas': [{'tipo': 'poligono', 'puntos': [[0.02, 0.831], [0.64, 0.995], [0.993, 0.84], [0.373, 0.676]]}]},
+    # Turbina: el óvalo del marco de arriba, bajado hasta el borde de abajo de la máquina
+    'motores-turbina': {'formas': [{'tipo': 'elipse', 'caja': [0.06, 0.37, 0.96, 0.95]}]},
     'enfermeria2-cama': {'forma': 'caja', 'fondo': 0.30},
     'enfermeria-cama': {'forma': 'caja', 'fondo': 0.30},
 }
@@ -52,6 +63,6 @@ for f in sorted(glob.glob(sys.argv[1] + '/nave-*.webp')):
     elif (b - t) > 1.4 * 2 * a: alto = 0.75 * 2 * a                # muebles altos y estrechos (taquilla, servidor...)
     else: alto = FONDO_CAJA * 2 * a
     alto = min(alto, 0.9 * (b - t))
-    out[n] = {'ancho': W, 'alto': H, 'forma': forma,
-              'huella': aj.get('huella') or [round(bl / W, 3), round((b - alto) / H, 3), round(br / W, 3), round(b / H, 3)]}
+    caja = [round(bl / W, 3), round((b - alto) / H, 3), round(br / W, 3), round(b / H, 3)]
+    out[n] = {'ancho': W, 'alto': H, 'formas': aj.get('formas') or [{'tipo': forma, 'caja': caja}]}
 print(json.dumps(out, indent=1, ensure_ascii=False))
