@@ -2,9 +2,10 @@
  "comedor-boton": {
   "ancho": 160,
   "alto": 201,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.562,
+   0.22,
    1.0,
    1.0
   ]
@@ -12,9 +13,10 @@
  "comedor-maquina": {
   "ancho": 150,
   "alto": 213,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.613,
+   0.22,
    1.0,
    1.0
   ]
@@ -22,19 +24,21 @@
  "comedor-mesa": {
   "ancho": 260,
   "alto": 188,
+  "forma": "caja",
   "huella": [
-   0.05,
-   0.55,
-   0.958,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "comedor-monitor": {
   "ancho": 150,
   "alto": 162,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.55,
+   0.22,
    1.0,
    1.0
   ]
@@ -42,29 +46,32 @@
  "comedor-papelera": {
   "ancho": 100,
   "alto": 160,
+  "forma": "caja",
   "huella": [
-   0.04,
-   0.656,
-   0.96,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "comedor-planta": {
   "ancho": 130,
   "alto": 169,
+  "forma": "caja",
   "huella": [
-   0.085,
-   0.577,
-   0.877,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "enfermeria-armario": {
   "ancho": 186,
   "alto": 256,
+  "forma": "caja",
   "huella": [
    0.005,
-   0.6,
+   0.22,
    1.0,
    1.0
   ]
@@ -72,9 +79,10 @@
  "enfermeria-cama": {
   "ancho": 256,
   "alto": 217,
+  "forma": "caja",
   "huella": [
-   0.004,
-   0.55,
+   0.0,
+   0.22,
    1.0,
    1.0
   ]
@@ -82,29 +90,32 @@
  "enfermeria-carrito": {
   "ancho": 190,
   "alto": 256,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.592,
-   0.947,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "enfermeria-escaner": {
   "ancho": 256,
   "alto": 175,
+  "forma": "caja",
   "huella": [
-   0.008,
-   0.55,
-   0.996,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "enfermeria-gotero": {
   "ancho": 88,
   "alto": 256,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.811,
+   0.22,
    0.92,
    1.0
   ]
@@ -112,19 +123,21 @@
  "enfermeria-mesa": {
   "ancho": 217,
   "alto": 256,
+  "forma": "caja",
   "huella": [
-   0.009,
-   0.55,
-   0.991,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "enfermeria2-armario": {
   "ancho": 169,
   "alto": 220,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.578,
+   0.22,
    1.0,
    1.0
   ]
@@ -132,9 +145,10 @@
  "enfermeria2-cama": {
   "ancho": 260,
   "alto": 115,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.55,
+   0.22,
    1.0,
    1.0
   ]
@@ -142,29 +156,32 @@
  "enfermeria2-gotero": {
   "ancho": 77,
   "alto": 220,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.807,
-   0.961,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "motores-banco": {
   "ancho": 223,
   "alto": 256,
+  "forma": "caja",
   "huella": [
-   0.004,
-   0.55,
-   0.978,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "motores-cajas": {
   "ancho": 256,
   "alto": 230,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.55,
+   0.22,
    1.0,
    1.0
   ]
@@ -172,49 +189,54 @@
  "motores-deposito": {
   "ancho": 179,
   "alto": 256,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.615,
-   0.883,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "motores-herramientas": {
   "ancho": 256,
   "alto": 222,
+  "forma": "caja",
   "huella": [
-   0.004,
-   0.55,
-   0.996,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "motores-medidores": {
   "ancho": 256,
   "alto": 239,
+  "forma": "caja",
   "huella": [
-   0.008,
-   0.55,
-   0.996,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "motores-turbina": {
   "ancho": 256,
   "alto": 239,
+  "forma": "caja",
   "huella": [
-   0.023,
-   0.55,
-   0.996,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "motores2-deposito": {
   "ancho": 103,
   "alto": 220,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.742,
+   0.22,
    1.0,
    1.0
   ]
@@ -222,9 +244,10 @@
  "motores2-medidores": {
   "ancho": 220,
   "alto": 122,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.55,
+   0.22,
    1.0,
    1.0
   ]
@@ -232,9 +255,10 @@
  "reactor-barril": {
   "ancho": 160,
   "alto": 256,
+  "forma": "caja",
   "huella": [
-   0.006,
-   0.656,
+   0.0,
+   0.22,
    0.994,
    1.0
   ]
@@ -242,9 +266,10 @@
  "reactor-consola": {
   "ancho": 227,
   "alto": 256,
+  "forma": "caja",
   "huella": [
-   0.004,
-   0.548,
+   0.0,
+   0.219,
    1.0,
    0.996
   ]
@@ -252,9 +277,10 @@
  "reactor-nucleo": {
   "ancho": 256,
   "alto": 225,
+  "forma": "elipse",
   "huella": [
    0.0,
-   0.55,
+   0.3,
    1.0,
    1.0
   ]
@@ -262,9 +288,10 @@
  "reactor-refrigerador": {
   "ancho": 159,
   "alto": 256,
+  "forma": "caja",
   "huella": [
-   0.006,
-   0.658,
+   0.0,
+   0.22,
    1.0,
    1.0
   ]
@@ -272,9 +299,10 @@
  "reactor-tanques": {
   "ancho": 207,
   "alto": 256,
+  "forma": "caja",
   "huella": [
-   0.005,
-   0.555,
+   0.0,
+   0.22,
    1.0,
    1.0
   ]
@@ -282,9 +310,10 @@
  "reactor-tubos": {
   "ancho": 256,
   "alto": 249,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.55,
+   0.22,
    1.0,
    1.0
   ]
@@ -292,9 +321,10 @@
  "reactor2-refrigerador": {
   "ancho": 135,
   "alto": 220,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.662,
+   0.22,
    1.0,
    1.0
   ]
@@ -302,9 +332,10 @@
  "reactor2-tanques": {
   "ancho": 220,
   "alto": 184,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.55,
+   0.22,
    1.0,
    1.0
   ]
@@ -312,9 +343,10 @@
  "seguridad-archivador": {
   "ancho": 156,
   "alto": 256,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.665,
+   0.22,
    1.0,
    1.0
   ]
@@ -322,19 +354,21 @@
  "seguridad-cafe": {
   "ancho": 256,
   "alto": 194,
+  "forma": "caja",
   "huella": [
-   0.047,
-   0.55,
-   0.953,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "seguridad-mesa": {
   "ancho": 256,
   "alto": 241,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.55,
+   0.22,
    1.0,
    1.0
   ]
@@ -342,9 +376,10 @@
  "seguridad-servidor": {
   "ancho": 158,
   "alto": 256,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.661,
+   0.22,
    1.0,
    1.0
   ]
@@ -352,19 +387,21 @@
  "seguridad-silla": {
   "ancho": 173,
   "alto": 256,
+  "forma": "caja",
   "huella": [
-   0.006,
-   0.628,
-   0.85,
+   0.0,
+   0.22,
+   0.994,
    1.0
   ]
  },
  "seguridad-taquilla": {
   "ancho": 140,
   "alto": 256,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.699,
+   0.22,
    1.0,
    1.0
   ]
@@ -372,9 +409,10 @@
  "seguridad2-archivador": {
   "ancho": 161,
   "alto": 220,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.597,
+   0.22,
    1.0,
    1.0
   ]
@@ -382,9 +420,10 @@
  "seguridad2-servidor": {
   "ancho": 112,
   "alto": 220,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.72,
+   0.22,
    1.0,
    1.0
   ]
@@ -392,19 +431,21 @@
  "seguridad2-silla": {
   "ancho": 128,
   "alto": 220,
+  "forma": "caja",
   "huella": [
-   0.086,
-   0.68,
-   0.914,
+   0.0,
+   0.22,
+   1.0,
    1.0
   ]
  },
  "seguridad2-taquilla": {
   "ancho": 102,
   "alto": 220,
+  "forma": "caja",
   "huella": [
    0.0,
-   0.745,
+   0.22,
    1.0,
    1.0
   ]
