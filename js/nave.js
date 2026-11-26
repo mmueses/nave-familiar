@@ -86,7 +86,7 @@
   }
   var CAFE_PROPS = ['cafe-mesa', 'cafe-maquina', 'cafe-papelera', 'cafe-planta'];
   function texFloor(c, r) {
-    var T = MAP.id === 'nave' && TEX[r.id];   // los suelos con imagen son de la Nave
+    var T = MAP.isShip() && TEX[r.id];   // los suelos con imagen son de la Nave
     if (!T || !T.ok || !c.createPattern) return false;
     var pat = c.createPattern(T.img, 'repeat');
     if (!pat) return false;
@@ -150,7 +150,7 @@
     var top = H.top || '#434c70', line = H.line || 'rgba(14,18,40,0.55)', hi = H.hi || 'rgba(190,205,255,0.10)';
     hullPath(c); c.fillStyle = top; c.fill();
     c.save(); hullPath(c); c.clip();
-    var MT = MAP.id === 'nave' && TEX.macizo && TEX.macizo.ok && c.createPattern ? TEX.macizo : null;
+    var MT = MAP.isShip() && TEX.macizo && TEX.macizo.ok && c.createPattern ? TEX.macizo : null;
     if (MT) {   // chapa de Gemini (A4): ya trae planchas, remaches, rejillas y tuberías
       var mp = c.createPattern(MT.img, 'repeat'), mk = MT.w / MT.img.width;
       mp.setTransform(new DOMMatrix().scaleSelf(mk, mk)); c.fillStyle = mp; c.fillRect(-200, -200, MAP.w + 400, MAP.h + 400);
@@ -871,7 +871,7 @@
       c.beginPath(); c.arc(0, 0, 24 + p * 4, 0, Math.PI * 2); c.stroke();
     }
     var i, TT = TEX['tarea-' + (s.type === 'upload' ? 'download' : s.type)];
-    if (MAP.id === 'nave' && TT && TT.ok) {   // máquina dibujada con Gemini, apoyada 18 por debajo del punto de la tarea
+    if (MAP.isShip() && TT && TT.ok) {   // máquina dibujada con Gemini, apoyada 18 por debajo del punto de la tarea
       var tw = TASK_W[s.type] || 36, th = tw * TT.img.height / TT.img.width;
       c.drawImage(TT.img, -tw / 2, 18 - th, tw, th);
       if (s.type === 'reactor' && reactorAlarm && Math.sin(t * 10) > 0) { c.fillStyle = 'rgba(255,40,40,0.45)'; rr(c, -tw / 2, 18 - th, tw, th, 6); c.fill(); }

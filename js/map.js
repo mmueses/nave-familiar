@@ -205,10 +205,16 @@
     ]
   };
 
+  // ---------- Nave (pruebas): copia exacta de la Nave para trabajar mejoras (colisiones, muebles...) ----------
+  // La Nave normal NO se toca hasta que el usuario dé por buenas las mejoras. Todo cambio nuevo va solo en 'nave2'.
+  var DEF_NAVE2 = JSON.parse(JSON.stringify(DEF_NAVE));
+  DEF_NAVE2.id = 'nave2';
+  DEF_NAVE2.name = 'map.nave2';
+
   var MAP = {};
-  var DEFS = { nave: DEF_NAVE, abisal: DEF_ABISAL };
+  var DEFS = { nave: DEF_NAVE, nave2: DEF_NAVE2, abisal: DEF_ABISAL };
   MAP.DEFS = DEFS;
-  MAP.IDS = ['nave', 'abisal'];
+  MAP.IDS = ['nave', 'nave2', 'abisal'];
   MAP.TASK_TYPES = ['wires', 'numbers', 'download', 'calibrate', 'card', 'asteroids', 'simon', 'pipes', 'memory', 'fill', 'clean', 'maze', 'sort', 'safe'];
 
   MAP.inRect = function (x, y) {
@@ -310,7 +316,7 @@
   // Cambia de mapa. Todos los archivos usan el mismo objeto MAP, así que basta con rellenarlo.
   // Los mapas se diseñan a escala 1 ("base") y se agrandan al usarlos (SCALE). El dibujo se hace en coordenadas base
   // con el lienzo agrandado (MAP.withBase), así que todo se ve igual pero más grande que los personajes.
-  var SCALE = { nave: 1.3, abisal: 1.3 };
+  var SCALE = { nave: 1.3, nave2: 1.3, abisal: 1.3 };
   function sc(v, k) { return Math.round(v * k); }
   function scaleDef(d, k) {
     function R(r) { var o = {}; for (var q in r) o[q] = r[q]; o.x = sc(r.x, k); o.y = sc(r.y, k); if (r.w != null) { o.w = sc(r.w, k); o.h = sc(r.h, k); } return o; }
@@ -345,6 +351,8 @@
     load(MAP.base); MAP.scale = 1;
     try { return fn(); } finally { load(cur); MAP.scale = k; }
   };
+  // ¿Es una de las dos naves? (se dibujan igual)
+  MAP.isShip = function () { return MAP.id === 'nave' || MAP.id === 'nave2'; };
   MAP.use('nave');
 
   root.NAVE_MAP = MAP;

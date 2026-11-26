@@ -1,6 +1,6 @@
 /* Hace que el juego se pueda instalar como app y abrir sin Internet (para jugar solo).
    Siempre intenta primero la versión nueva de Internet; si no hay conexión, usa la guardada. */
-var CACHE = 'nave-familiar'; // v37
+var CACHE = 'nave-familiar'; // v38
 self.addEventListener('install', function () { self.skipWaiting(); });
 self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });
 self.addEventListener('fetch', function (e) {
