@@ -65,8 +65,13 @@
   var ENGINE_PROPS = ['motores-turbina', 'motores-deposito'];
   function hasProps(list) { for (var i = 0; i < list.length; i++) if (!TEX[list[i]] || !TEX[list[i]].ok) return false; return true; }
   var PROP_SHADOWS = false;   // 23-11: sin sombras pintadas por código (no convencían); el dibujo ya apoya en el suelo
+  var FROM_LIST = false;
+  // En el código, los muebles del Comedor se llaman 'cafe-*'; en las imágenes y en MAP.props, 'comedor-*'
+  function propTex(id) { return id.replace(/^comedor-/, 'cafe-'); }
+  function inPropList(texId) { for (var i = 0; i < MAP.props.length; i++) if (propTex(MAP.props[i].id) === texId) return true; return false; }   // en la Nave (pruebas) los muebles salen de MAP.props (js/map.js), no de las llamadas fijas
   function drawProp(c, id, x, y, w, shadowOn) {
     var T = TEX[id]; if (!T || !T.ok) return false;
+    if (!FROM_LIST && MAP.props && MAP.props.length && inPropList(id)) return true;
     var h = w * T.img.height / T.img.width;
     if (PROP_SHADOWS && shadowOn !== false && T.sh) {
       // sombra de apoyo: la silueta del objeto aplastada justo debajo de su base (luz desde arriba, como en Among Us)
@@ -640,6 +645,48 @@
   }
 
   // ---------- partes ANIMADAS ----------
+  // Animaciones que van ENCIMA de un mueble dibujado (se repiten si el mueble se vuelve a pintar delante de alguien)
+  function engineSpin(c, t, cx, cy) {
+    c.save(); c.translate(cx, cy); c.scale(1, 0.55); c.rotate(t * 6); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 2.5;
+    for (var i = 0; i < 3; i++) { c.rotate(Math.PI * 2 / 3); c.beginPath(); c.arc(0, 0, 20, 0, 0.9); c.stroke(); }
+    c.restore();
+  }
+  function reactorGlow(c, rcx, rcy, alarm, pulse) {
+    var gy = rcy - 4, gl = c.createRadialGradient(rcx, gy, 2, rcx, gy, 40);
+    gl.addColorStop(0, alarm ? 'rgba(255,200,170,' + (0.5 + 0.4 * pulse) + ')' : 'rgba(200,250,255,' + (0.25 + 0.3 * pulse) + ')');
+    gl.addColorStop(1, alarm ? 'rgba(255,30,30,0)' : 'rgba(60,180,255,0)');
+    c.save(); c.globalCompositeOperation = alarm ? 'source-over' : 'lighter'; c.fillStyle = gl; c.beginPath(); c.ellipse(rcx, gy, 40, 32, 0, 0, Math.PI * 2); c.fill(); c.restore();
+    if (alarm) { c.fillStyle = 'rgba(255,40,40,' + (0.25 * pulse) + ')'; c.beginPath(); c.ellipse(rcx, gy, 44, 34, 0, 0, Math.PI * 2); c.fill(); }
+  }
+  // Nave (pruebas): muebles que hay que volver a pintar DELANTE de algún personaje que está detrás de ellos.
+  // chars: [{x, y}] en coordenadas del mundo (agrandadas). Devuelve [{y: base del mueble, draw(ctx, t, reactor)}].
+  function frontProps(chars) {
+    var out = [];
+    if (!MAP.props || !MAP.props.length || !chars.length) return out;
+    var K = MAP.scale || 1, base = MAP.base.props || [];
+    MAP.props.forEach(function (p, i) {
+      var T = TEX[propTex(p.id)]; if (!T || !T.ok) return;
+      var h = p.w * T.img.height / T.img.width, x0 = p.x - p.w / 2, x1 = p.x + p.w / 2, y0 = p.y - h;
+      var behind = chars.some(function (ch) {
+        var fy = ch.y + 17;   // pies
+        return fy < p.y && ch.x + 16 > x0 && ch.x - 16 < x1 && fy > y0 && ch.y - 45 < p.y;
+      });
+      if (!behind) return;
+      var b = base[i];
+      out.push({ y: p.y, draw: function (ctx, t, reactor) {
+        ctx.save(); ctx.scale(K, K);
+        try {
+          MAP.withBase(function () {
+            FROM_LIST = true; drawProp(ctx, propTex(b.id), b.x, b.y, b.w); FROM_LIST = false;
+            if (b.id === 'motores-turbina') engineSpin(ctx, t, b.x, b.y - b.w * 0.42);
+            if (b.id === 'reactor-nucleo') { var r = R('reactor'); reactorGlow(ctx, r.x + 110, r.y + 155, reactor, 0.5 + 0.5 * Math.sin(t * (reactor ? 10 : 2))); }
+          });
+        } finally { FROM_LIST = false; ctx.restore(); }
+      } });
+    });
+    return out;
+  }
+
   function animDecor(c, t, opts) {
     var r, i;
     // Comedor: vapor de la cafetera y luces de la máquina
@@ -666,9 +713,7 @@
     var cx = r.x + 52, cy = r.y + 192;
     if (ENG_T && hasProps(ENGINE_PROPS)) { cx = ENG_T.x; cy = ENG_T.b - ENG_T.w * 0.42; }
     if (hasProps(ENGINE_PROPS)) {   // estelas girando encima de la turbina dibujada
-      c.save(); c.translate(cx, cy); c.scale(1, 0.55); c.rotate(t * 6); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 2.5;
-      for (i = 0; i < 3; i++) { c.rotate(Math.PI * 2 / 3); c.beginPath(); c.arc(0, 0, 20, 0, 0.9); c.stroke(); }
-      c.restore();
+      engineSpin(c, t, cx, cy);
     } else {
       var glow = c.createRadialGradient(cx, cy, 4, cx, cy, 31); glow.addColorStop(0, 'rgba(255,200,100,0.95)'); glow.addColorStop(1, 'rgba(255,90,40,0.15)');
       circ(c, cx, cy, 31, glow);
@@ -681,11 +726,7 @@
     r = R('reactor');
     var rcx = r.x + 110, rcy = r.y + 155, alarm = opts.reactor, pulse = 0.5 + 0.5 * Math.sin(t * (alarm ? 10 : 2));
     if (hasProps(REACTOR_PROPS)) {   // brillo que late encima de la cúpula dibujada
-      var gy = rcy - 4, gl = c.createRadialGradient(rcx, gy, 2, rcx, gy, 40);
-      gl.addColorStop(0, alarm ? 'rgba(255,200,170,' + (0.5 + 0.4 * pulse) + ')' : 'rgba(200,250,255,' + (0.25 + 0.3 * pulse) + ')');
-      gl.addColorStop(1, alarm ? 'rgba(255,30,30,0)' : 'rgba(60,180,255,0)');
-      c.save(); c.globalCompositeOperation = alarm ? 'source-over' : 'lighter'; c.fillStyle = gl; c.beginPath(); c.ellipse(rcx, gy, 40, 32, 0, 0, Math.PI * 2); c.fill(); c.restore();
-      if (alarm) { c.fillStyle = 'rgba(255,40,40,' + (0.25 * pulse) + ')'; c.beginPath(); c.ellipse(rcx, gy, 44, 34, 0, 0, Math.PI * 2); c.fill(); }
+      reactorGlow(c, rcx, rcy, alarm, pulse);
     } else {
       var core = c.createRadialGradient(rcx, rcy, 3, rcx, rcy, 32);
       core.addColorStop(0, alarm ? 'rgba(255,240,200,1)' : 'rgba(220,255,255,1)');
@@ -1037,6 +1078,11 @@
     signs(c, tr, sk);
     placeItems(c, MAP.id === 'abisal' ? ABISAL_UNDER : NAVE_UNDER);
     sk.staticDecor(c);
+    if (MAP.props && MAP.props.length) {   // Nave (pruebas): muebles de la lista, en orden de atrás hacia delante
+      FROM_LIST = true;
+      MAP.props.slice().sort(function (a, b) { return a.y - b.y; }).forEach(function (p) { drawProp(c, propTex(p.id), p.x, p.y, p.w); });
+      FROM_LIST = false;
+    }
     placeItems(c, MAP.id === 'abisal' ? ABISAL_OVER : NAVE_OVER.filter(function (it) {
       // los detalles antiguos de las salas que ya tienen muebles de Gemini se quitan
       var x = it[1], y = it[2];
@@ -1081,7 +1127,7 @@
 
   SKINS.nave = { background: background, exteriorStatic: exteriorStatic, exteriorAnim: exteriorAnim, floor: floor, staticDecor: staticDecor, animDecor: animDecor, theme: THEME };
   root.SHIP = {
-    draw: draw, SKINS: SKINS, PAD: PAD, OUT: OUT,
+    draw: draw, SKINS: SKINS, PAD: PAD, OUT: OUT, frontProps: frontProps,
     hull: hull, inHull: inHull, hullPath: hullPath,
     U: { rr: rr, circ: circ, shadow: shadow, box: box, shade: shade, unionPath: unionPath, rand: rand, crate: crate, plant: plant, table: table, corridor: corridor }
   };

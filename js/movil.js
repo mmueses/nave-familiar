@@ -602,8 +602,15 @@
     for (var key in disp) if (key !== 'me' && !seen[key]) delete disp[key];
     // dibujar de arriba a abajo para que los de delante tapen a los de detrás
     var all = others.concat([{ me: true, d: me }]);
-    all.sort(function (a, b) { return a.d.y - b.d.y; });
+    all.forEach(function (o) { o.k = o.d.y; });
+    // Nave (pruebas): los muebles que tienen a alguien detrás se vuelven a pintar en su sitio del orden
+    if (window.SHIP && SHIP.frontProps) {
+      SHIP.frontProps(all.filter(function (o) { return !(o.me && s.me.vent); }).map(function (o) { return { x: o.d.x, y: o.d.y }; }))
+        .forEach(function (f) { all.push({ prop: f, k: f.y - 17 }); });
+    }
+    all.sort(function (a, b) { return a.k - b.k; });
     all.forEach(function (o) {
+      if (o.prop) { o.prop.draw(ctx, time, !!s.reactor); return; }
       if (o.me) {
         if (s.me.vent) return;
         DRAW.character(ctx, me.x, me.y, hexOf(s.me.c), { name: s.me.n, ghost: s.me.ghost, walk: me.walk, dir: me.dir, nameColor: '#ffe66b', look: s.me.k, t: time });

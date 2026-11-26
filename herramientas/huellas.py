@@ -66,4 +66,8 @@ for f in sorted(glob.glob(sys.argv[1] + '/nave-*.webp')):
     alto = min(alto, 0.9 * (b - t))
     caja = [round(bl / W, 3), round((b - alto) / H, 3), round(br / W, 3), round(b / H, 3)]
     out[n] = {'ancho': W, 'alto': H, 'formas': aj.get('formas') or [{'tipo': forma, 'caja': caja}]}
-print(json.dumps(out, indent=1, ensure_ascii=False))
+if '--js' in sys.argv:   # versión para el juego: js/huellas.js
+    print('/* Generado por herramientas/huellas.py --js (no editar a mano). Zonas de choque de los muebles. */')
+    print('(typeof window !== "undefined" ? window : globalThis).HUELLAS = ' + json.dumps(out, separators=(',', ':')) + ';')
+else:
+    print(json.dumps(out, indent=1, ensure_ascii=False))

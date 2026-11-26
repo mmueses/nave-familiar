@@ -210,6 +210,21 @@
   var DEF_NAVE2 = JSON.parse(JSON.stringify(DEF_NAVE));
   DEF_NAVE2.id = 'nave2';
   DEF_NAVE2.name = 'map.nave2';
+  // Muebles de la Nave (pruebas): posición de su base (x, y) en coordenadas base y ancho w. Una sola lista:
+  // de aquí salen el dibujo (js/nave.js) y los choques (HUELLAS, de js/huellas.js).
+  DEF_NAVE2.props = [
+    { id: 'comedor-mesa', x: 835, y: 255, w: 88 }, { id: 'comedor-mesa', x: 985, y: 255, w: 88 },
+    { id: 'comedor-maquina', x: 1002, y: 112, w: 42 },
+    { id: 'comedor-planta', x: 778, y: 94, w: 34 }, { id: 'comedor-planta', x: 1045, y: 110, w: 28 },
+    { id: 'comedor-papelera', x: 781, y: 284, w: 24 },
+    { id: 'enfermeria2-cama', x: 484, y: 184, w: 70 }, { id: 'enfermeria2-cama', x: 558, y: 184, w: 70 },
+    { id: 'motores2-medidores', x: 404, y: 356, w: 44 }, { id: 'motores2-deposito', x: 318, y: 510, w: 20 },
+    { id: 'motores-turbina', x: 344, y: 566, w: 70 },
+    { id: 'reactor2-tanques', x: 140, y: 384, w: 44 }, { id: 'reactor2-refrigerador', x: 214, y: 544, w: 24 },
+    { id: 'reactor-nucleo', x: 140, y: 542, w: 100 },
+    { id: 'seguridad2-servidor', x: 678, y: 280, w: 20 }, { id: 'seguridad2-silla', x: 630, y: 318, w: 18 },
+    { id: 'seguridad2-taquilla', x: 596, y: 356, w: 18 }, { id: 'seguridad2-archivador', x: 734, y: 356, w: 22 }
+  ];
 
   var MAP = {};
   var DEFS = { nave: DEF_NAVE, nave2: DEF_NAVE2, abisal: DEF_ABISAL };
@@ -248,10 +263,94 @@
     return true;
   };
   // Un personaje (radio r) cabe si sus 4 esquinas están dentro de alguna zona transitable.
-  MAP.walkable = function (x, y, r) {
+  MAP.walkable = function (x, y, r, ignoreProps) {
     r = r || 10;
     return MAP.inRect(x - r, y - r) && MAP.inRect(x + r, y - r) &&
-           MAP.inRect(x - r, y + r) && MAP.inRect(x + r, y + r);
+           MAP.inRect(x - r, y + r) && MAP.inRect(x + r, y + r) && (ignoreProps || !MAP.hitsProp(x, y));
+  };
+  // Punto transitable más cercano (busca en anillos). Para no quedarse dentro de un mueble.
+  MAP.nearestWalkable = function (x, y, r) {
+    if (MAP.walkable(x, y, r)) return { x: x, y: y };
+    for (var d = 6; d <= 120; d += 6) {
+      for (var a = 0; a < 16; a++) {
+        var px = x + Math.cos(a * Math.PI / 8) * d, py = y + Math.sin(a * Math.PI / 8) * d;
+        if (MAP.walkable(px, py, r)) return { x: px, y: py };
+      }
+    }
+    return { x: x, y: y };
+  };
+  // Camino que esquiva los muebles (A* sobre una rejilla de celdas de 8, y luego se estira en líneas rectas).
+  // Devuelve una lista de puntos {x, y} que termina en el destino (o en el punto libre más cercano a él).
+  var PG = null, PGW = 0, PGH = 0, PC = 8, PR = 10;
+  function pgrid() {
+    if (PG) return PG;
+    PGW = Math.ceil(MAP.w / PC) + 1; PGH = Math.ceil(MAP.h / PC) + 1;
+    PG = new Uint8Array(PGW * PGH);
+    // una celda vale si se puede estar en ella y también un poco alrededor (así, al ir de una celda a la de al lado, no se roza ningún mueble)
+    function ok(x, y) { return MAP.walkable(x, y, PR) && MAP.walkable(x - 4, y, PR) && MAP.walkable(x + 4, y, PR) && MAP.walkable(x, y - 4, PR) && MAP.walkable(x, y + 4, PR); }
+    for (var gy = 0; gy < PGH; gy++) for (var gx = 0; gx < PGW; gx++) PG[gy * PGW + gx] = ok(gx * PC, gy * PC) ? 1 : 0;
+    return PG;
+  }
+  function lineWalk(ax, ay, bx, by) {
+    var d = Math.hypot(bx - ax, by - ay), n = Math.ceil(d / 2);
+    for (var i = 1; i <= n; i++) if (!MAP.walkable(ax + (bx - ax) * i / n, ay + (by - ay) * i / n, PR)) return false;
+    return true;
+  }
+  function nearCell(x, y) {
+    var G = pgrid(), cx = Math.round(x / PC), cy = Math.round(y / PC);
+    for (var rad = 0; rad < 20; rad++) {
+      var best = -1, bd = Infinity;
+      for (var dy = -rad; dy <= rad; dy++) for (var dx = -rad; dx <= rad; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== rad) continue;
+        var gx = cx + dx, gy = cy + dy;
+        if (gx < 0 || gy < 0 || gx >= PGW || gy >= PGH || !G[gy * PGW + gx]) continue;
+        var dd = Math.hypot(gx * PC - x, gy * PC - y);
+        if (dd < bd) { bd = dd; best = gy * PGW + gx; }
+      }
+      if (best >= 0) return best;
+    }
+    return -1;
+  }
+  MAP.findPath = function (ax, ay, bx, by) {
+    var G = pgrid();
+    if (lineWalk(ax, ay, bx, by)) return [{ x: bx, y: by }];
+    var s = nearCell(ax, ay), g = nearCell(bx, by);
+    if (s < 0 || g < 0) return null;
+    var N = PGW * PGH, gs = new Float32Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1), done = new Uint8Array(N);
+    var heap = [], gxg = g % PGW, gyg = (g / PGW) | 0;
+    function h(i) { var x = i % PGW, y = (i / PGW) | 0, dx = Math.abs(x - gxg), dy = Math.abs(y - gyg); return Math.max(dx, dy) + 0.414 * Math.min(dx, dy); }
+    function push(i, f) { heap.push([f, i]); var k = heap.length - 1; while (k > 0) { var q = (k - 1) >> 1; if (heap[q][0] <= heap[k][0]) break; var t = heap[q]; heap[q] = heap[k]; heap[k] = t; k = q; } }
+    function pop() { var top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; var k = 0; for (;;) { var l = 2 * k + 1, r = l + 1, m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; var t = heap[m]; heap[m] = heap[k]; heap[k] = t; k = m; } } return top; }
+    gs[s] = 0; push(s, h(s));
+    var D = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
+    while (heap.length) {
+      var u = pop()[1];
+      if (done[u]) continue; done[u] = 1;
+      if (u === g) break;
+      var ux = u % PGW, uy = (u / PGW) | 0;
+      for (var k = 0; k < 8; k++) {
+        var vx = ux + D[k][0], vy = uy + D[k][1];
+        if (vx < 0 || vy < 0 || vx >= PGW || vy >= PGH) continue;
+        var v = vy * PGW + vx;
+        if (!G[v] || done[v]) continue;
+        if (D[k][2] > 1 && (!G[uy * PGW + vx] || !G[vy * PGW + ux])) continue;   // sin cortar esquinas
+        var nd = gs[u] + D[k][2];
+        if (nd < gs[v]) { gs[v] = nd; prev[v] = u; push(v, nd + h(v)); }
+      }
+    }
+    if (!done[g]) return null;
+    var cells = []; for (var c = g; c >= 0; c = prev[c]) cells.unshift(c);
+    var pts = cells.map(function (i) { return { x: (i % PGW) * PC, y: ((i / PGW) | 0) * PC }; });
+    if (MAP.walkable(bx, by, PR) && lineWalk(pts[pts.length - 1].x, pts[pts.length - 1].y, bx, by)) pts.push({ x: bx, y: by });
+    // estirar: desde cada punto, saltar al más lejano que se vea en línea recta transitable
+    var out = [], cur = { x: ax, y: ay }, i = 0;
+    if (!lineWalk(ax, ay, pts[0].x, pts[0].y)) cur = pts[0], out.push(pts[0]), i = 1;   // arranque pegado a un mueble
+    while (i < pts.length) {
+      var j = pts.length - 1;
+      while (j > i && !lineWalk(cur.x, cur.y, pts[j].x, pts[j].y)) j--;
+      out.push(pts[j]); cur = pts[j]; i = j + 1;
+    }
+    return out;
   };
   MAP.roomAt = function (x, y) {
     for (var i = 0; i < MAP.rooms.length; i++) {
@@ -325,7 +424,8 @@
       id: d.id, name: d.name, w: sc(d.w, k), h: sc(d.h, k), wallFace: sc(d.wallFace, k),
       rooms: d.rooms.map(R), corridors: d.corridors.map(R), stations: d.stations.map(R), vents: d.vents.map(R),
       cameras: d.cameras.map(R), holes: (d.holes || []).map(R), labels: d.labels,
-      spawn: { x: sc(d.spawn.x, k), y: sc(d.spawn.y, k), r: sc(d.spawn.r, k) }, nodes: nodes, edges: d.edges
+      spawn: { x: sc(d.spawn.x, k), y: sc(d.spawn.y, k), r: sc(d.spawn.r, k) }, nodes: nodes, edges: d.edges,
+      props: (d.props || []).map(function (p) { return { id: p.id, x: p.x * k, y: p.y * k, w: p.w * k }; })
     };
   }
   var FIELDS = ['id', 'name', 'w', 'h', 'wallFace', 'rooms', 'corridors', 'stations', 'vents', 'cameras', 'labels', 'spawn', 'nodes', 'edges', 'holes'];
@@ -333,7 +433,48 @@
     FIELDS.forEach(function (k) { MAP[k] = src[k]; });
     MAP.holes = src.holes || [];
     MAP.rects = MAP.rooms.concat(MAP.corridors);
+    MAP.props = src.props || [];
+    MAP.obstacles = src.obstacles || (src.obstacles = buildObstacles(MAP.props));
   }
+
+  // ---------- Choques con los muebles (solo mapas con 'props': hoy la Nave (pruebas)) ----------
+  // Cada mueble se dibuja con su base en (x, y) y ancho w; sus formas (HUELLAS) están en fracciones de la imagen.
+  // Lo que choca son los PIES del personaje: un óvalo pequeño a FEET_DY por debajo de su punto (x, y).
+  var FEET_DY = 15, FEET_RX = 8, FEET_RY = 4;
+  function buildObstacles(props) {
+    var H = root.HUELLAS || {}, out = [];
+    props.forEach(function (p) {
+      var hu = H[p.id]; if (!hu) return;
+      var w = p.w, h = w * hu.alto / hu.ancho, x0 = p.x - w / 2, y0 = p.y - h;
+      hu.formas.forEach(function (f) {
+        if (f.tipo === 'poligono') {
+          out.push({ t: 'p', pts: f.puntos.map(function (q) { return [x0 + q[0] * w, y0 + q[1] * h]; }) });
+        } else {
+          var a = x0 + f.caja[0] * w, b = y0 + f.caja[1] * h, c = x0 + f.caja[2] * w, d = y0 + f.caja[3] * h;
+          out.push(f.tipo === 'elipse' ? { t: 'e', cx: (a + c) / 2, cy: (b + d) / 2, rx: (c - a) / 2, ry: (d - b) / 2 } : { t: 'r', x0: a, y0: b, x1: c, y1: d });
+        }
+      });
+    });
+    return out;
+  }
+  function inShape(o, x, y) {
+    if (o.t === 'e') { var u = (x - o.cx) / o.rx, v = (y - o.cy) / o.ry; return u * u + v * v <= 1; }
+    if (o.t === 'r') return x >= o.x0 && x <= o.x1 && y >= o.y0 && y <= o.y1;
+    var inside = false, P = o.pts;
+    for (var i = 0, j = P.length - 1; i < P.length; j = i++) {
+      if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inside = !inside;
+    }
+    return inside;
+  }
+  // ¿Los pies de un personaje en (x, y) pisan algún mueble?
+  MAP.hitsProp = function (x, y) {
+    var O = MAP.obstacles; if (!O || !O.length) return false;
+    var fy = y + FEET_DY;
+    var pts = [[x, fy], [x - FEET_RX, fy], [x + FEET_RX, fy], [x, fy - FEET_RY], [x, fy + FEET_RY]];
+    for (var i = 0; i < O.length; i++) for (var j = 0; j < pts.length; j++) if (inShape(O[i], pts[j][0], pts[j][1])) return true;
+    return false;
+  };
+  MAP.FEET_DY = FEET_DY;
   var SCALED = {};
   MAP.use = function (id) {
     var d = DEFS[id] || DEF_NAVE;
@@ -341,7 +482,7 @@
     MAP.scale = SCALE[d.id] || 1;
     MAP.base = d;
     load(SCALED[d.id] || (SCALED[d.id] = scaleDef(d, MAP.scale)));
-    GW = Math.ceil(MAP.w / CELL) + 2; GH = Math.ceil(MAP.h / CELL) + 2; GRID = null;
+    GW = Math.ceil(MAP.w / CELL) + 2; GH = Math.ceil(MAP.h / CELL) + 2; GRID = null; PG = null;
     return true;
   };
   // Dibuja con la geometría base (sin agrandar). El que llama ya ha escalado el lienzo por MAP.scale.

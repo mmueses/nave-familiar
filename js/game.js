@@ -272,6 +272,7 @@
       var a = (i / all.length) * Math.PI * 2;
       p.x = MAP.spawn.x + Math.cos(a) * MAP.spawn.r;
       p.y = MAP.spawn.y + Math.sin(a) * MAP.spawn.r * 0.6;
+      if (MAP.obstacles && MAP.obstacles.length) { var q = MAP.nearestWalkable(p.x, p.y, CFG.radius); p.x = q.x; p.y = q.y; }   // nunca encima de un mueble
       p.input = { x: 0, y: 0 };
       p.busy = null; p.vent = null;
       p.ai = null;
@@ -378,6 +379,11 @@
     if (!ix && !iy) return;
     var sp = CFG.speed * this.settings.speed;
     var nx = p.x + ix * sp * dt, ny = p.y + iy * sp * dt;
+    // si por lo que sea ha quedado encima de un mueble, que pueda salir (sin contar los muebles)
+    if (MAP.obstacles && MAP.obstacles.length && MAP.hitsProp(p.x, p.y)) {
+      if (MAP.walkable(nx, ny, CFG.radius, true)) { p.x = nx; p.y = ny; }
+      return;
+    }
     if (MAP.walkable(nx, ny, CFG.radius)) { p.x = nx; p.y = ny; }
     else if (MAP.walkable(nx, p.y, CFG.radius)) { p.x = nx; }
     else if (MAP.walkable(p.x, ny, CFG.radius)) { p.y = ny; }
@@ -810,7 +816,16 @@
     return best || room || Object.keys(MAP.nodes)[0];
   };
   // Prepara un camino hasta el punto (x,y). then: qué hacer al llegar; sid: estación objetivo
+  // Tramo corto en línea recta; con muebles que chocan, esquivándolos
+  G.pathTo = function (p, x, y) {
+    if (MAP.obstacles && MAP.obstacles.length) { var fp = MAP.findPath(p.x, p.y, x, y); if (fp) return fp; }
+    return [{ x: x, y: y }];
+  };
   G.botGo = function (p, x, y, then, sid) {
+    if (MAP.obstacles && MAP.obstacles.length) {   // mapas con muebles que chocan: camino que los esquiva
+      var fp = MAP.findPath(p.x, p.y, x, y);
+      if (fp) { p.ai.path = fp; p.ai.then = then; p.ai.sid = sid || null; return; }
+    }
     var from = this.nearestNodeTo(p.x, p.y);
     var to = this.nearestNodeTo(x, y);
     var pts = MAP.path(from, to).map(function (n) { return { x: MAP.nodes[n][0], y: MAP.nodes[n][1] }; });
@@ -871,8 +886,8 @@
         // a veces huye por una rejilla
         var near = null, nd = 260;
         MAP.vents.forEach(function (v) { var d = dist(p, v); if (d < nd && MAP.clear(p.x, p.y, v.x, v.y)) { nd = d; near = v; } });
-        if (Math.random() < B.selfReport) { ai.path = [{ x: victimPos.x + 20, y: victimPos.y }]; ai.then = 'report'; ai.wait = 0; }
-        else if (near && Math.random() < B.ventEscape) { ai.path = [{ x: near.x, y: near.y }]; ai.then = 'vent'; ai.sid = null; }
+        if (Math.random() < B.selfReport) { ai.path = this.pathTo(p, victimPos.x + 20, victimPos.y); ai.then = 'report'; ai.wait = 0; }
+        else if (near && Math.random() < B.ventEscape) { ai.path = this.pathTo(p, near.x, near.y); ai.then = 'vent'; ai.sid = null; }
         else { ai.path = null; ai.wait = this.now + rnd(0.5, 1.5); }
         return;
       }
