@@ -1,28 +1,57 @@
-# Calcula la "huella" (parte que choca) de cada mueble a partir de la transparencia de su imagen.
-# Regla (26-11, usuario): los personajes andan por el suelo, nunca por encima de los muebles.
-# Choca casi todo el dibujo; solo queda libre una franja arriba (TOP) para que el personaje pueda
-# meterse un poco "detrás" y el mueble le tape los pies.
-# Resultado en fracciones de la imagen: el mueble se dibuja con su base en (x, y) y ancho w.
+# Zona de choque de cada mueble = la huella que deja en el SUELO (26-11, regla del usuario).
+# - Base redonda (papelera, maceta, cúpula...): se mide la curva del borde de abajo del dibujo y se
+#   completa el óvalo entero. Ese óvalo es lo que choca.
+# - Base recta (máquina, taquilla...): rectángulo que sale de la línea de abajo, con un fondo
+#   proporcional al ancho.
+# Todo lo que queda por encima de la huella no choca: el mueble tapa al personaje que pasa por detrás.
+# Resultado en fracciones de la imagen; el mueble se dibuja con su base en (x, y) y ancho w.
 import json, sys, glob, os
 from PIL import Image
-TOP = 0.22   # parte de arriba del dibujo que no choca
-ESPECIALES = {  # forma propia
-    'reactor-nucleo': {'forma': 'elipse', 'huella': [0.0, 0.30, 1.0, 1.0]},   # cúpula: circunferencia algo más amplia que la base
+FONDO_CAJA = 0.45      # fondo de un rectángulo = 45 % de su ancho
+# Ajustes a mano por pieza (se aplican después del cálculo): forma forzada y/o fondo
+AJUSTES = {
+    'reactor-nucleo': {'forma': 'elipse', 'huella': [0.0, 0.30, 1.0, 1.0]},   # cúpula: aprobada así por el usuario
+    'seguridad2-silla': {'forma': 'elipse', 'fondo': 0.45},   # patas en estrella
+    'seguridad-silla': {'forma': 'elipse', 'fondo': 0.45},
+    'comedor-maquina': {'forma': 'caja', 'fondo': 0.45},
+    'comedor-mesa': {'forma': 'elipse', 'fondo': 0.55},      # tablero redondo con taburetes alrededor
+    'enfermeria2-cama': {'forma': 'caja', 'fondo': 0.30},
+    'enfermeria-cama': {'forma': 'caja', 'fondo': 0.30},
 }
+def perfil(m, W, H):
+    px = m.load(); low = {}
+    for x in range(W):
+        for y in range(H - 1, -1, -1):
+            if px[x, y]: low[x] = y; break
+    return low
 out = {}
 for f in sorted(glob.glob(sys.argv[1] + '/nave-*.webp')):
     n = os.path.basename(f)[5:-5]
     if 'suelo' in n or n in ('pared', 'pared-pasillo', 'macizo', 'ojo-buey', 'rejilla', 'lampara', 'puerta'): continue
-    im = Image.open(f).convert('RGBA'); W, H = im.size; a = im.getchannel('A')
-    m = a.point(lambda v: 255 if v > 40 else 0)
+    im = Image.open(f).convert('RGBA'); W, H = im.size
+    m = im.getchannel('A').point(lambda v: 255 if v > 40 else 0)
     bb = m.getbbox()
     if not bb: continue
     l, t, r, b = bb
-    top = t + TOP * (b - t)
-    band = m.crop((0, int(top), W, b)).getbbox()
+    low = perfil(m, W, H)
+    # franja de abajo (último 15 % del alto): su ancho es el ancho de la base
+    band = m.crop((0, int(b - 0.15 * (b - t)), W, b)).getbbox()
     bl, br = (band[0], band[2]) if band else (l, r)
-    e = {'ancho': W, 'alto': H, 'forma': 'caja',
-         'huella': [round(bl / W, 3), round(top / H, 3), round(br / W, 3), round(b / H, 3)]}
-    if n in ESPECIALES: e.update(ESPECIALES[n])
-    out[n] = e
+    cx, a = (bl + br) / 2, (br - bl) / 2
+    # ajuste de la curva de abajo: y = cy + k*sqrt(1-u^2)  (k > 0 si es redonda)
+    pts = [(x, low[x]) for x in range(int(bl + a * 0.1), int(br - a * 0.1)) if x in low]
+    S = [(1 - ((x - cx) / a) ** 2) ** 0.5 for x, _ in pts]; Y = [y for _, y in pts]
+    nS = len(S); ms = sum(S) / nS; my = sum(Y) / nS
+    var = sum((s - ms) ** 2 for s in S) or 1e-9
+    k = sum((s - ms) * (y - my) for s, y in zip(S, Y)) / var
+    redonda = k / a > 0.12
+    aj = AJUSTES.get(n, {})
+    forma = aj.get('forma', 'elipse' if redonda else 'caja')
+    if 'fondo' in aj: alto = aj['fondo'] * 2 * a
+    elif forma == 'elipse': alto = max(2 * k, 0.35 * 2 * a)        # cilindros de base casi plana: óvalo mínimo
+    elif (b - t) > 1.4 * 2 * a: alto = 0.75 * 2 * a                # muebles altos y estrechos (taquilla, servidor...)
+    else: alto = FONDO_CAJA * 2 * a
+    alto = min(alto, 0.9 * (b - t))
+    out[n] = {'ancho': W, 'alto': H, 'forma': forma,
+              'huella': aj.get('huella') or [round(bl / W, 3), round((b - alto) / H, 3), round(br / W, 3), round(b / H, 3)]}
 print(json.dumps(out, indent=1, ensure_ascii=False))
