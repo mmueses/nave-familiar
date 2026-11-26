@@ -14,13 +14,14 @@ AJUSTES = {
     'reactor-nucleo': {'formas': [{'tipo': 'elipse', 'caja': [0.0, 0.30, 1.0, 1.0]}]},   # cúpula: aprobada así por el usuario
     'seguridad2-silla': {'forma': 'elipse', 'fondo': 0.45},   # patas en estrella
     'seguridad-silla': {'forma': 'elipse', 'fondo': 0.45},
-    # Mesa: el tablero, bajado hasta el suelo (su borde de abajo = el de la base de la pata), y un círculo por taburete
+    # Mesa: el tablero y el asiento de cada taburete, bajados hasta el suelo (borde de abajo = el de la base de su pata)
     'comedor-mesa': {'formas': [
         {'tipo': 'elipse', 'caja': [0.115, 0.33, 0.90, 0.835]},   # tablero bajado al suelo
-        {'tipo': 'elipse', 'caja': [0.065, 0.436, 0.185, 0.51]},  # taburete de atrás, izquierda
-        {'tipo': 'elipse', 'caja': [0.808, 0.436, 0.927, 0.51]},  # taburete de atrás, derecha
-        {'tipo': 'elipse', 'caja': [0.115, 0.894, 0.246, 1.0]},   # taburete de delante, izquierda
-        {'tipo': 'elipse', 'caja': [0.765, 0.894, 0.896, 1.0]}]}, # taburete de delante, derecha
+        {'tipo': 'elipse', 'caja': [0.0, 0.319, 0.252, 0.511]},  # asiento del taburete de atrás, izquierda, bajado al suelo y centrado en su pata
+        {'tipo': 'elipse', 'caja': [0.74, 0.319, 0.994, 0.511]},  # asiento del taburete de atrás, derecha, bajado al suelo y centrado en su pata
+        {'tipo': 'elipse', 'caja': [0.054, 0.809, 0.308, 1.0]},  # asiento del taburete de delante, izquierda, bajado al suelo y centrado en su pata
+        {'tipo': 'elipse', 'caja': [0.704, 0.809, 0.958, 1.0]},  # asiento del taburete de delante, derecha, bajado al suelo y centrado en su pata
+        ]},
     # Máquina expendedora (está girada): el suelo es un paralelogramo en perspectiva.
     # Esquinas de abajo medidas en el dibujo: delante-izquierda, delante-derecha, atrás-derecha; la 4.ª se completa.
     'comedor-maquina': {'formas': [{'tipo': 'poligono', 'puntos': [[0.02, 0.831], [0.64, 0.995], [0.993, 0.84], [0.373, 0.676]]}]},
