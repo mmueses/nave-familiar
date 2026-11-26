@@ -661,5 +661,275 @@
     ]
    }
   ]
+ },
+ "tarea-admin": {
+  "ancho": 220,
+  "alto": 152,
+  "formas": [
+   {
+    "tipo": "elipse",
+    "caja": [
+     0.0,
+     0.44,
+     1.0,
+     0.86
+    ]
+   }
+  ]
+ },
+ "tarea-asteroids": {
+  "ancho": 172,
+  "alto": 220,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.07,
+     0.495,
+     0.93,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-calibrate": {
+  "ancho": 182,
+  "alto": 220,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.0,
+     0.835,
+     1.0,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-cameras": {
+  "ancho": 220,
+  "alto": 177,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.05,
+     0.497,
+     0.95,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-card": {
+  "ancho": 142,
+  "alto": 220,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.0,
+     0.871,
+     1.0,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-clean": {
+  "ancho": 220,
+  "alto": 219,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.145,
+     0.893,
+     0.855,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-download": {
+  "ancho": 220,
+  "alto": 207,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.045,
+     0.563,
+     0.959,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-fill": {
+  "ancho": 150,
+  "alto": 220,
+  "formas": [
+   {
+    "tipo": "elipse",
+    "caja": [
+     0.0,
+     0.7,
+     0.95,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-lights": {
+  "ancho": 172,
+  "alto": 220,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.006,
+     0.845,
+     0.994,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-maze": {
+  "ancho": 220,
+  "alto": 192,
+  "formas": [
+   {
+    "tipo": "elipse",
+    "caja": [
+     0.118,
+     0.694,
+     0.882,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-memory": {
+  "ancho": 220,
+  "alto": 199,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.0,
+     0.779,
+     1.0,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-numbers": {
+  "ancho": 161,
+  "alto": 220,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.0,
+     0.854,
+     1.0,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-pipes": {
+  "ancho": 189,
+  "alto": 220,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.0,
+     0.828,
+     1.0,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-reactor": {
+  "ancho": 220,
+  "alto": 210,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.055,
+     0.58,
+     0.945,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-safe": {
+  "ancho": 198,
+  "alto": 220,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.03,
+     0.607,
+     1.0,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-simon": {
+  "ancho": 219,
+  "alto": 220,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.0,
+     0.801,
+     1.0,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-sort": {
+  "ancho": 220,
+  "alto": 161,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.03,
+     0.6,
+     0.97,
+     1.0
+    ]
+   }
+  ]
+ },
+ "tarea-wires": {
+  "ancho": 212,
+  "alto": 220,
+  "formas": [
+   {
+    "tipo": "caja",
+    "caja": [
+     0.0,
+     0.88,
+     0.95,
+     1.0
+    ]
+   }
+  ]
  }
 }

@@ -11,6 +11,15 @@ from PIL import Image
 FONDO_CAJA = 0.45      # fondo de un rectángulo = 45 % de su ancho
 # Ajustes a mano por pieza (se aplican después del cálculo): forma forzada y/o fondo
 AJUSTES = {
+    # Máquinas de las tareas (tarea-*.webp)
+    'tarea-admin': {'formas': [{'tipo': 'elipse', 'caja': [0.0, 0.44, 1.0, 0.86]}]},   # mesa holográfica: el disco de arriba, bajado al suelo
+    'tarea-fill': {'formas': [{'tipo': 'elipse', 'caja': [0.0, 0.70, 0.95, 1.0]}]},    # tanque sobre patas: el tanque, bajado al suelo
+    'tarea-sort': {'formas': [{'tipo': 'caja', 'caja': [0.03, 0.60, 0.97, 1.0]}]},     # mesa de muestras
+    'tarea-wires': {'formas': [{'tipo': 'caja', 'caja': [0.0, 0.88, 0.95, 1.0]}]},     # caja de cables: panel plano
+    'tarea-calibrate': {'forma': 'caja', 'fondo': 0.2}, 'tarea-card': {'forma': 'caja', 'fondo': 0.2},   # paneles planos: franja fina
+    'tarea-clean': {'forma': 'caja', 'fondo': 0.15}, 'tarea-lights': {'forma': 'caja', 'fondo': 0.2},
+    'tarea-memory': {'forma': 'caja', 'fondo': 0.2}, 'tarea-numbers': {'forma': 'caja', 'fondo': 0.2},
+    'tarea-pipes': {'forma': 'caja', 'fondo': 0.2}, 'tarea-simon': {'forma': 'caja', 'fondo': 0.2},
     'reactor-nucleo': {'formas': [{'tipo': 'elipse', 'caja': [0.0, 0.30, 1.0, 1.0]}]},   # cúpula: aprobada así por el usuario
     'seguridad2-silla': {'forma': 'elipse', 'fondo': 0.45},   # patas en estrella
     'seguridad-silla': {'forma': 'elipse', 'fondo': 0.45},
@@ -37,8 +46,9 @@ def perfil(m, W, H):
             if px[x, y]: low[x] = y; break
     return low
 out = {}
-for f in sorted(glob.glob(sys.argv[1] + '/nave-*.webp')):
-    n = os.path.basename(f)[5:-5]
+for f in sorted(glob.glob(sys.argv[1] + '/nave-*.webp') + glob.glob(sys.argv[1] + '/tarea-*.webp')):
+    b0 = os.path.basename(f)[:-5]
+    n = b0[5:] if b0.startswith('nave-') else b0          # 'nave-reactor-nucleo' -> 'reactor-nucleo'; 'tarea-wires' se queda
     if 'suelo' in n or n in ('pared', 'pared-pasillo', 'macizo', 'ojo-buey', 'rejilla', 'lampara', 'puerta'): continue
     im = Image.open(f).convert('RGBA'); W, H = im.size
     m = im.getchannel('A').point(lambda v: 255 if v > 40 else 0)

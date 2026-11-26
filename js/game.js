@@ -824,7 +824,9 @@
   G.botGo = function (p, x, y, then, sid) {
     if (MAP.obstacles && MAP.obstacles.length) {   // mapas con muebles que chocan: camino que los esquiva
       var fp = MAP.findPath(p.x, p.y, x, y);
-      if (fp) { p.ai.path = fp; p.ai.then = then; p.ai.sid = sid || null; return; }
+      p.ai.path = fp || null; p.ai.then = fp ? then : null; p.ai.sid = fp ? (sid || null) : null;
+      if (!fp) p.ai.wait = this.now + 0.5;
+      return;
     }
     var from = this.nearestNodeTo(p.x, p.y);
     var to = this.nearestNodeTo(x, y);
@@ -935,8 +937,13 @@
       var target = ai.path[0];
       var step = CFG.speed * this.settings.speed * this.bp().speed * dt;
       var d = Math.hypot(target.x - p.x, target.y - p.y);
+      var ox = p.x, oy = p.y;
       if (d <= step) { p.x = target.x; p.y = target.y; ai.path.shift(); }
       else { p.x += (target.x - p.x) / d * step; p.y += (target.y - p.y) / d * step; }
+      // mapas con muebles: si este paso le metería en un mueble (y antes no lo estaba), se para y vuelve a pensar
+      if (!ghost && MAP.obstacles && MAP.obstacles.length && MAP.hitsProp(p.x, p.y) && !MAP.hitsProp(ox, oy)) {
+        p.x = ox; p.y = oy; ai.path = null; ai.then = null; ai.wait = this.now + 0.3; return;
+      }
       if (ai.path.length) return;
       ai.path = null;
       this.botArrive(p);

@@ -212,6 +212,8 @@
   DEF_NAVE2.name = 'map.nave2';
   // Muebles de la Nave (pruebas): posición de su base (x, y) en coordenadas base y ancho w. Una sola lista:
   // de aquí salen el dibujo (js/nave.js) y los choques (HUELLAS, de js/huellas.js).
+  // Cosas dibujadas con código que también chocan (rectángulos en coordenadas base): la barra del Comedor
+  DEF_NAVE2.solids = [{ x0: 830, y0: 56, x1: 950, y1: 78 }];
   DEF_NAVE2.props = [
     { id: 'comedor-mesa', x: 835, y: 255, w: 88 }, { id: 'comedor-mesa', x: 985, y: 255, w: 88 },
     { id: 'comedor-maquina', x: 1002, y: 112, w: 42 },
@@ -323,10 +325,12 @@
     function pop() { var top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; var k = 0; for (;;) { var l = 2 * k + 1, r = l + 1, m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; var t = heap[m]; heap[m] = heap[k]; heap[k] = t; k = m; } } return top; }
     gs[s] = 0; push(s, h(s));
     var D = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
+    var bestC = s, bestH = h(s);   // si no se puede llegar al destino, se va lo más cerca posible
     while (heap.length) {
       var u = pop()[1];
       if (done[u]) continue; done[u] = 1;
       if (u === g) break;
+      var hu = h(u); if (hu < bestH) { bestH = hu; bestC = u; }
       var ux = u % PGW, uy = (u / PGW) | 0;
       for (var k = 0; k < 8; k++) {
         var vx = ux + D[k][0], vy = uy + D[k][1];
@@ -338,10 +342,11 @@
         if (nd < gs[v]) { gs[v] = nd; prev[v] = u; push(v, nd + h(v)); }
       }
     }
-    if (!done[g]) return null;
+    var reached = !!done[g];
+    if (!reached) g = bestC;
     var cells = []; for (var c = g; c >= 0; c = prev[c]) cells.unshift(c);
     var pts = cells.map(function (i) { return { x: (i % PGW) * PC, y: ((i / PGW) | 0) * PC }; });
-    if (MAP.walkable(bx, by, PR) && lineWalk(pts[pts.length - 1].x, pts[pts.length - 1].y, bx, by)) pts.push({ x: bx, y: by });
+    if (reached && MAP.walkable(bx, by, PR) && lineWalk(pts[pts.length - 1].x, pts[pts.length - 1].y, bx, by)) pts.push({ x: bx, y: by });
     // estirar: desde cada punto, saltar al más lejano que se vea en línea recta transitable
     var out = [], cur = { x: ax, y: ay }, i = 0;
     if (!lineWalk(ax, ay, pts[0].x, pts[0].y)) cur = pts[0], out.push(pts[0]), i = 1;   // arranque pegado a un mueble
@@ -425,7 +430,9 @@
       rooms: d.rooms.map(R), corridors: d.corridors.map(R), stations: d.stations.map(R), vents: d.vents.map(R),
       cameras: d.cameras.map(R), holes: (d.holes || []).map(R), labels: d.labels,
       spawn: { x: sc(d.spawn.x, k), y: sc(d.spawn.y, k), r: sc(d.spawn.r, k) }, nodes: nodes, edges: d.edges,
-      props: (d.props || []).map(function (p) { return { id: p.id, x: p.x * k, y: p.y * k, w: p.w * k }; })
+      props: d.props && d.props.map(function (p) { return { id: p.id, x: p.x * k, y: p.y * k, w: p.w * k }; }),
+      solids: d.solids && d.solids.map(function (o) { return { x0: o.x0 * k, y0: o.y0 * k, x1: o.x1 * k, y1: o.y1 * k }; }),
+      k: k
     };
   }
   var FIELDS = ['id', 'name', 'w', 'h', 'wallFace', 'rooms', 'corridors', 'stations', 'vents', 'cameras', 'labels', 'spawn', 'nodes', 'edges', 'holes'];
@@ -434,26 +441,57 @@
     MAP.holes = src.holes || [];
     MAP.rects = MAP.rooms.concat(MAP.corridors);
     MAP.props = src.props || [];
-    MAP.obstacles = src.obstacles || (src.obstacles = buildObstacles(MAP.props));
+    if (!src.drawables) build(src);
+    MAP.drawables = src.drawables; MAP.obstacles = src.obstacles;
   }
 
   // ---------- Choques con los muebles (solo mapas con 'props': hoy la Nave (pruebas)) ----------
   // Cada mueble se dibuja con su base en (x, y) y ancho w; sus formas (HUELLAS) están en fracciones de la imagen.
   // Lo que choca son los PIES del personaje: un óvalo pequeño a FEET_DY por debajo de su punto (x, y).
-  var FEET_DY = 15, FEET_RX = 8, FEET_RY = 4;
-  function buildObstacles(props) {
-    var H = root.HUELLAS || {}, out = [];
-    props.forEach(function (p) {
-      var hu = H[p.id]; if (!hu) return;
-      var w = p.w, h = w * hu.alto / hu.ancho, x0 = p.x - w / 2, y0 = p.y - h;
-      hu.formas.forEach(function (f) {
+  // Pies = el círculo que se ve en el suelo bajo el personaje (en js/draw.js: óvalo de ~22 × 6,5 a 16,5 por debajo).
+  var FEET_DY = 16, FEET_RX = 17, FEET_RY = 5.5;
+  // Ancho de las máquinas de las tareas (lo usa también js/nave.js para dibujarlas)
+  MAP.TASK_W = { wires: 38, numbers: 26, download: 44, upload: 44, calibrate: 34, card: 26, simon: 36, pipes: 36, memory: 42, fill: 30,
+    clean: 34, maze: 48, sort: 48, safe: 36, reactor: 42, cameras: 62, admin: 52, lights: 32, asteroids: 36 };
+  // Para mapas con muebles (src.props): lista de cosas con imagen que chocan y que pueden tapar a un personaje
+  // (muebles + máquinas de las tareas + botón de emergencia). Cada una: tex (nombre de la imagen en js/nave.js),
+  // x, y (base), w, key (borde de abajo de su forma principal: decide quién va delante al dibujar).
+  function build(src) {
+    src.drawables = []; src.obstacles = [];
+    if (!src.props) return;
+    var k = src.k || 1, H = root.HUELLAS || {};
+    src.props.forEach(function (p) { src.drawables.push({ hu: p.id, tex: p.id.replace(/^comedor-/, 'cafe-'), x: p.x, y: p.y, w: p.w }); });
+    src.stations.forEach(function (st) {
+      if (st.type === 'emergency') src.drawables.push({ hu: 'comedor-boton', tex: 'cafe-boton', x: st.x, y: st.y + 20 * k, w: 40 * k, st: st.id });
+      else {
+        var ty = st.type === 'upload' ? 'download' : st.type;
+        if (MAP.TASK_W[st.type]) src.drawables.push({ hu: 'tarea-' + ty, tex: 'tarea-' + ty, x: st.x, y: st.y + 18 * k, w: MAP.TASK_W[st.type] * k, st: st.id });
+      }
+    });
+    src.drawables = src.drawables.filter(function (d) { return H[d.hu]; });
+    src.drawables.forEach(function (d) {
+      var sh = shapesOf(d, H[d.hu]);
+      d.key = Math.max.apply(null, [sh[0]].map(function (o) { return o.t === 'e' ? o.cy + o.ry : o.t === 'r' ? o.y1 : Math.max.apply(null, o.pts.map(function (q) { return q[1]; })); }));
+      sh.forEach(function (o) { src.obstacles.push(o); });
+    });
+    (src.solids || []).forEach(function (o) { src.obstacles.push({ t: 'r', x0: o.x0, y0: o.y0, x1: o.x1, y1: o.y1 }); });
+    src.obstacles.forEach(function (o) {   // caja envolvente, para descartar rápido
+      if (o.t === 'e') { o.bx0 = o.cx - o.rx; o.bx1 = o.cx + o.rx; o.by0 = o.cy - o.ry; o.by1 = o.cy + o.ry; }
+      else if (o.t === 'r') { o.bx0 = o.x0; o.bx1 = o.x1; o.by0 = o.y0; o.by1 = o.y1; }
+      else { var xs = o.pts.map(function (q) { return q[0]; }), ys = o.pts.map(function (q) { return q[1]; });
+        o.bx0 = Math.min.apply(null, xs); o.bx1 = Math.max.apply(null, xs); o.by0 = Math.min.apply(null, ys); o.by1 = Math.max.apply(null, ys); }
+    });
+  }
+  function shapesOf(p, hu) {
+    var out = [];
+    var w = p.w, h = w * hu.alto / hu.ancho, x0 = p.x - w / 2, y0 = p.y - h;
+    hu.formas.forEach(function (f) {
         if (f.tipo === 'poligono') {
           out.push({ t: 'p', pts: f.puntos.map(function (q) { return [x0 + q[0] * w, y0 + q[1] * h]; }) });
         } else {
           var a = x0 + f.caja[0] * w, b = y0 + f.caja[1] * h, c = x0 + f.caja[2] * w, d = y0 + f.caja[3] * h;
           out.push(f.tipo === 'elipse' ? { t: 'e', cx: (a + c) / 2, cy: (b + d) / 2, rx: (c - a) / 2, ry: (d - b) / 2 } : { t: 'r', x0: a, y0: b, x1: c, y1: d });
         }
-      });
     });
     return out;
   }
@@ -466,12 +504,37 @@
     }
     return inside;
   }
-  // ¿Los pies de un personaje en (x, y) pisan algún mueble?
+  // ¿Los pies de un personaje en (x, y) pisan algún mueble? Cálculo exacto: se estira el dibujo en vertical
+  // (factor FEET_RX / FEET_RY) para que el óvalo de los pies sea un círculo de radio FEET_RX.
+  function segDist2(px, py, ax, ay, bx, by) {
+    var dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy, t = L ? ((px - ax) * dx + (py - ay) * dy) / L : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    var qx = ax + t * dx - px, qy = ay + t * dy - py; return qx * qx + qy * qy;
+  }
+  function feetHit(o, x, fy) {
+    var S = FEET_RX / FEET_RY, R = FEET_RX, R2 = R * R;
+    if (o.t === 'r') {
+      var cx = Math.max(o.x0, Math.min(x, o.x1)), cy = Math.max(o.y0, Math.min(fy, o.y1));
+      var dx = x - cx, dy = (fy - cy) * S; return dx * dx + dy * dy <= R2;
+    }
+    if (o.t === 'e') {   // óvalo agrandado con los pies (aproximación muy buena para óvalos)
+      var u = (x - o.cx) / (o.rx + FEET_RX), v = (fy - o.cy) / (o.ry + FEET_RY); return u * u + v * v <= 1;
+    }
+    if (inShape(o, x, fy)) return true;
+    var P = o.pts;
+    for (var i = 0, j = P.length - 1; i < P.length; j = i++) {
+      if (segDist2(x, fy * S, P[j][0], P[j][1] * S, P[i][0], P[i][1] * S) <= R2) return true;
+    }
+    return false;
+  }
   MAP.hitsProp = function (x, y) {
     var O = MAP.obstacles; if (!O || !O.length) return false;
     var fy = y + FEET_DY;
-    var pts = [[x, fy], [x - FEET_RX, fy], [x + FEET_RX, fy], [x, fy - FEET_RY], [x, fy + FEET_RY]];
-    for (var i = 0; i < O.length; i++) for (var j = 0; j < pts.length; j++) if (inShape(O[i], pts[j][0], pts[j][1])) return true;
+    for (var i = 0; i < O.length; i++) {
+      var o = O[i];
+      if (x + FEET_RX < o.bx0 || x - FEET_RX > o.bx1 || fy + FEET_RY < o.by0 || fy - FEET_RY > o.by1) continue;
+      if (feetHit(o, x, fy)) return true;
+    }
     return false;
   };
   MAP.FEET_DY = FEET_DY;

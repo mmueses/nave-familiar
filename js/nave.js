@@ -50,8 +50,7 @@
   ['cama', 'escaner', 'armario', 'gotero', 'mesa', 'carrito'].forEach(function (n) { prop('enfermeria-' + n, 'nave-enfermeria-' + n + '.webp'); });
   ['mesa', 'silla', 'servidor', 'archivador', 'cafe', 'taquilla'].forEach(function (n) { prop('seguridad-' + n, 'nave-seguridad-' + n + '.webp'); });
   // 23-11: máquinas de tareas (T1, T2) y muebles de frente (C1-C4) dibujados con Gemini
-  var TASK_W = { wires: 38, numbers: 26, download: 44, upload: 44, calibrate: 34, card: 26, simon: 36, pipes: 36, memory: 42, fill: 30,
-    clean: 34, maze: 48, sort: 48, safe: 36, reactor: 42, cameras: 62, admin: 52, lights: 32, asteroids: 36 };
+  var TASK_W = MAP.TASK_W;   // ancho de las máquinas de las tareas (definido en js/map.js)
   Object.keys(TASK_W).forEach(function (n) { if (n !== 'upload') tex('tarea-' + n, 'img/mapas/tarea-' + n + '.webp?v=1', -1); });
   ['reactor2-tanques', 'reactor2-refrigerador', 'motores2-medidores', 'motores2-deposito', 'enfermeria2-cama', 'enfermeria2-armario',
    'seguridad2-servidor', 'seguridad2-archivador', 'seguridad2-taquilla', 'seguridad2-silla'].forEach(function (n) { tex(n, 'img/mapas/nave-' + n + '.webp?v=1', -1); });
@@ -658,28 +657,29 @@
     c.save(); c.globalCompositeOperation = alarm ? 'source-over' : 'lighter'; c.fillStyle = gl; c.beginPath(); c.ellipse(rcx, gy, 40, 32, 0, 0, Math.PI * 2); c.fill(); c.restore();
     if (alarm) { c.fillStyle = 'rgba(255,40,40,' + (0.25 * pulse) + ')'; c.beginPath(); c.ellipse(rcx, gy, 44, 34, 0, 0, Math.PI * 2); c.fill(); }
   }
-  // Nave (pruebas): muebles que hay que volver a pintar DELANTE de algún personaje que está detrás de ellos.
-  // chars: [{x, y}] en coordenadas del mundo (agrandadas). Devuelve [{y: base del mueble, draw(ctx, t, reactor)}].
+  // Nave (pruebas): muebles y máquinas que hay que volver a pintar DELANTE de algún personaje que está detrás de ellos.
+  // chars: [{x, y}] en coordenadas del mundo (agrandadas). Devuelve [{y: clave de orden, draw(ctx, t, reactor)}].
+  // La clave es el borde de abajo de la forma principal (en la mesa, la base de la pata, no los taburetes de delante).
   function frontProps(chars) {
     var out = [];
-    if (!MAP.props || !MAP.props.length || !chars.length) return out;
-    var K = MAP.scale || 1, base = MAP.base.props || [];
-    MAP.props.forEach(function (p, i) {
-      var T = TEX[propTex(p.id)]; if (!T || !T.ok) return;
-      var h = p.w * T.img.height / T.img.width, x0 = p.x - p.w / 2, x1 = p.x + p.w / 2, y0 = p.y - h;
+    if (!MAP.drawables || !MAP.drawables.length || !chars.length) return out;
+    var K = MAP.scale || 1;
+    MAP.drawables.forEach(function (d) {
+      var T = TEX[d.tex]; if (!T || !T.ok) return;
+      var h = d.w * T.img.height / T.img.width, x0 = d.x - d.w / 2, x1 = d.x + d.w / 2, y0 = d.y - h;
       var behind = chars.some(function (ch) {
         var fy = ch.y + 17;   // pies
-        return fy < p.y && ch.x + 16 > x0 && ch.x - 16 < x1 && fy > y0 && ch.y - 45 < p.y;
+        return fy < d.key && ch.x + 18 > x0 && ch.x - 18 < x1 && fy > y0 - 4 && ch.y - 45 < d.y;
       });
       if (!behind) return;
-      var b = base[i];
-      out.push({ y: p.y, draw: function (ctx, t, reactor) {
+      var bx = d.x / K, by = d.y / K, bw = d.w / K;
+      out.push({ y: d.key, draw: function (ctx, t, reactor) {
         ctx.save(); ctx.scale(K, K);
         try {
           MAP.withBase(function () {
-            FROM_LIST = true; drawProp(ctx, propTex(b.id), b.x, b.y, b.w); FROM_LIST = false;
-            if (b.id === 'motores-turbina') engineSpin(ctx, t, b.x, b.y - b.w * 0.42);
-            if (b.id === 'reactor-nucleo') { var r = R('reactor'); reactorGlow(ctx, r.x + 110, r.y + 155, reactor, 0.5 + 0.5 * Math.sin(t * (reactor ? 10 : 2))); }
+            FROM_LIST = true; drawProp(ctx, d.tex, bx, by, bw); FROM_LIST = false;
+            if (d.hu === 'motores-turbina') engineSpin(ctx, t, bx, by - bw * 0.42);
+            if (d.hu === 'reactor-nucleo') { var r = R('reactor'); reactorGlow(ctx, r.x + 110, r.y + 155, reactor, 0.5 + 0.5 * Math.sin(t * (reactor ? 10 : 2))); }
           });
         } finally { FROM_LIST = false; ctx.restore(); }
       } });
