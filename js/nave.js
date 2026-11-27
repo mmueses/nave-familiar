@@ -666,23 +666,41 @@
     var K = MAP.scale || 1;
     MAP.drawables.forEach(function (d) {
       var T = TEX[d.tex]; if (!T || !T.ok) return;
-      var h = d.w * T.img.height / T.img.width, x0 = d.x - d.w / 2, x1 = d.x + d.w / 2, y0 = d.y - h;
-      var behind = chars.some(function (ch) {
-        var fy = ch.y + 17;   // pies
-        return fy < d.key && ch.x + 18 > x0 && ch.x - 18 < x1 && fy > y0 - 4 && ch.y - 45 < d.y;
+      var h = d.w * T.img.height / T.img.width, ix0 = d.x - d.w / 2, iy0 = d.y - h;
+      var all = d.parts ? d.parts.filter(function (q) { return q.zona; }) : [];
+      (d.parts || [{ key: d.key, zona: null }]).forEach(function (part) {
+        // caja del trozo en el mundo (para ver si hay alguien detrás)
+        var bx0 = ix0, by0 = iy0, bx1 = ix0 + d.w, by1 = d.y;
+        if (part.zona) {
+          bx0 = Infinity; by0 = Infinity; bx1 = -Infinity; by1 = -Infinity;
+          part.zona.forEach(function (z) { bx0 = Math.min(bx0, ix0 + z[0] * d.w); bx1 = Math.max(bx1, ix0 + z[2] * d.w); by0 = Math.min(by0, iy0 + z[1] * h); by1 = Math.max(by1, iy0 + z[3] * h); });
+        }
+        var behind = chars.some(function (ch) {
+          var fy = ch.y + 17;   // pies
+          return fy < part.key && ch.x + 18 > bx0 && ch.x - 18 < bx1 && fy > by0 - 4 && ch.y - 45 < by1;
+        });
+        if (!behind) return;
+        var bx = d.x / K, by = d.y / K, bw = d.w / K, bh = h / K, bix = bx - bw / 2, biy = by - bh;
+        out.push({ y: part.key, draw: function (ctx, t, reactor) {
+          ctx.save(); ctx.scale(K, K);
+          try {
+            MAP.withBase(function () {
+              if (d.parts) {   // recortar al trozo: su zona, o (el tablero) todo menos las zonas de los demás
+                ctx.beginPath();
+                if (part.zona) part.zona.forEach(function (z) { ctx.rect(bix + z[0] * bw, biy + z[1] * bh, (z[2] - z[0]) * bw, (z[3] - z[1]) * bh); });
+                else {
+                  ctx.rect(bix - 1, biy - 1, bw + 2, bh + 2);
+                  all.forEach(function (q) { q.zona.forEach(function (z) { ctx.rect(bix + z[0] * bw, biy + z[1] * bh, (z[2] - z[0]) * bw, (z[3] - z[1]) * bh); }); });
+                }
+                ctx.clip(part.zona ? 'nonzero' : 'evenodd');
+              }
+              FROM_LIST = true; drawProp(ctx, d.tex, bx, by, bw); FROM_LIST = false;
+              if (d.hu === 'motores-turbina') engineSpin(ctx, t, bx, by - bw * 0.42);
+              if (d.hu === 'reactor-nucleo') { var r = R('reactor'); reactorGlow(ctx, r.x + 110, r.y + 155, reactor, 0.5 + 0.5 * Math.sin(t * (reactor ? 10 : 2))); }
+            });
+          } finally { FROM_LIST = false; ctx.restore(); }
+        } });
       });
-      if (!behind) return;
-      var bx = d.x / K, by = d.y / K, bw = d.w / K;
-      out.push({ y: d.key, draw: function (ctx, t, reactor) {
-        ctx.save(); ctx.scale(K, K);
-        try {
-          MAP.withBase(function () {
-            FROM_LIST = true; drawProp(ctx, d.tex, bx, by, bw); FROM_LIST = false;
-            if (d.hu === 'motores-turbina') engineSpin(ctx, t, bx, by - bw * 0.42);
-            if (d.hu === 'reactor-nucleo') { var r = R('reactor'); reactorGlow(ctx, r.x + 110, r.y + 155, reactor, 0.5 + 0.5 * Math.sin(t * (reactor ? 10 : 2))); }
-          });
-        } finally { FROM_LIST = false; ctx.restore(); }
-      } });
     });
     return out;
   }

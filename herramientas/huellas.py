@@ -23,13 +23,15 @@ AJUSTES = {
     'reactor-nucleo': {'formas': [{'tipo': 'elipse', 'caja': [0.0, 0.30, 1.0, 1.0]}]},   # cúpula: aprobada así por el usuario
     'seguridad2-silla': {'forma': 'elipse', 'fondo': 0.45},   # patas en estrella
     'seguridad-silla': {'forma': 'elipse', 'fondo': 0.45},
+    # 'zona': trozo del dibujo (rectángulos sin solaparse, en fracciones) que se pinta con el orden de ESA forma;
+    # lo que no está en ninguna zona va con la primera forma (el tablero con su pata).
     # Mesa: el tablero y el asiento de cada taburete, bajados hasta el suelo (borde de abajo = el de la base de su pata)
     'comedor-mesa': {'formas': [
         {'tipo': 'elipse', 'caja': [0.115, 0.33, 0.90, 0.835]},   # tablero bajado al suelo
-        {'tipo': 'elipse', 'caja': [0.0, 0.319, 0.252, 0.511]},  # asiento del taburete de atrás, izquierda, bajado al suelo y centrado en su pata
-        {'tipo': 'elipse', 'caja': [0.74, 0.319, 0.994, 0.511]},  # asiento del taburete de atrás, derecha, bajado al suelo y centrado en su pata
-        {'tipo': 'elipse', 'caja': [0.054, 0.809, 0.308, 1.0]},  # asiento del taburete de delante, izquierda, bajado al suelo y centrado en su pata
-        {'tipo': 'elipse', 'caja': [0.704, 0.809, 0.958, 1.0]},  # asiento del taburete de delante, derecha, bajado al suelo y centrado en su pata
+        {'tipo': 'elipse', 'caja': [0.0, 0.319, 0.252, 0.511], 'zona': [[0.0, 0.10, 0.125, 0.53], [0.125, 0.42, 0.19, 0.53]]},  # asiento del taburete de atrás, izquierda, bajado al suelo y centrado en su pata
+        {'tipo': 'elipse', 'caja': [0.74, 0.319, 0.994, 0.511], 'zona': [[0.875, 0.10, 1.0, 0.53], [0.81, 0.42, 0.875, 0.53]]},  # asiento del taburete de atrás, derecha, bajado al suelo y centrado en su pata
+        {'tipo': 'elipse', 'caja': [0.054, 0.809, 0.308, 1.0], 'zona': [[0.05, 0.57, 0.31, 1.0]]},  # asiento del taburete de delante, izquierda, bajado al suelo y centrado en su pata
+        {'tipo': 'elipse', 'caja': [0.704, 0.809, 0.958, 1.0], 'zona': [[0.70, 0.57, 0.96, 1.0]]},  # asiento del taburete de delante, derecha, bajado al suelo y centrado en su pata
         ]},
     # Máquina expendedora (está girada): el suelo es un paralelogramo en perspectiva.
     # Esquinas de abajo medidas en el dibujo: delante-izquierda, delante-derecha, atrás-derecha; la 4.ª se completa.

@@ -471,7 +471,12 @@
     src.drawables = src.drawables.filter(function (d) { return H[d.hu]; });
     src.drawables.forEach(function (d) {
       var sh = shapesOf(d, H[d.hu]);
-      d.key = Math.max.apply(null, [sh[0]].map(function (o) { return o.t === 'e' ? o.cy + o.ry : o.t === 'r' ? o.y1 : Math.max.apply(null, o.pts.map(function (q) { return q[1]; })); }));
+      function bottom(o) { return o.t === 'e' ? o.cy + o.ry : o.t === 'r' ? o.y1 : Math.max.apply(null, o.pts.map(function (q) { return q[1]; })); }
+      d.key = bottom(sh[0]);
+      // Muebles compuestos (mesa con taburetes): cada trozo del dibujo con su propio orden
+      if (H[d.hu].formas.some(function (f) { return f.zona; })) {
+        d.parts = H[d.hu].formas.map(function (f, i) { return { key: bottom(sh[i]), zona: f.zona || null }; });
+      }
       sh.forEach(function (o) { src.obstacles.push(o); });
     });
     (src.solids || []).forEach(function (o) { src.obstacles.push({ t: 'r', x0: o.x0, y0: o.y0, x1: o.x1, y1: o.y1 }); });
